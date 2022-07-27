@@ -4,3 +4,7 @@ main = "index.js"
 # usage_model = "unbound"
 compatibility_date = "2022-06-21"
 
+[[kv_namespaces]]
+  binding = "USERS"
+  id = "3e8ce4e04c70480fb05acdef900633b1"
+  preview_id = "dfacd22ca00b41f0a0f166e112933e05"
