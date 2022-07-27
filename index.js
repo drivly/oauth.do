@@ -18,7 +18,14 @@ const enrichRequest = req => {
 
 router.all('*', enrichRequest)
 router.get('/', (req, env) => json({ req }))
-router.get('/login', (req, env) => github.redirect({options:{clientId: env.GITHUB_CLIENT_ID}}))
+router.get('/login', async (req, env) => {
+  const loginUrl = await github.redirect({options:{clientId: env.GITHUB_CLIENT_ID}})
+  return Response.redirect(loginUrl, 302)
+})
+router.get('/callback', async (req, env) => {
+  const loginUrl = await github.redirect({options:{clientId: env.GITHUB_CLIENT_ID}})
+  return Response.redirect(loginUrl, 302)
+})
 
 export default {
   fetch: router.handle

@@ -3,8 +3,9 @@ account_id = "b6641681fe423910342b9ffa1364c76d"
 main = "index.js"
 # usage_model = "unbound"
 compatibility_date = "2022-06-21"
+node_compat = true
 
 [[kv_namespaces]]
   binding = "USERS"
-  id = "3e8ce4e04c70480fb05acdef900633b1"
-  preview_id = "dfacd22ca00b41f0a0f166e112933e05"
+  id = "7c8468b38a1446a293ad78ece015f86c"
+  preview_id = "e99589c478c24cb7b1c7f413c92db429"
