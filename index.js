@@ -31,7 +31,7 @@ router.get('/login', async (req, env) => {
 
 router.get('/callback', async (req, env) => {
   
-  const { user: providerUser } = await github.users({ options: { clientSecret: env.GITHUB_CLIENT_SECRET, clientId: env.GITHUB_CLIENT_ID }, request })
+  const { user: providerUser } = await github.users({ options: { clientSecret: env.GITHUB_CLIENT_SECRET, clientId: env.GITHUB_CLIENT_ID }, req })
   
   const profile = {
     id: user.id,
