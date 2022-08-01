@@ -31,7 +31,9 @@ router.get('/login', async (req, env) => {
 
 router.get('/callback', async (req, env) => {
   
-  const { user: providerUser } = await github.users({ options: { clientSecret: env.GITHUB_CLIENT_SECRET, clientId: env.GITHUB_CLIENT_ID }, req })
+  const clientId = env.GITHUB_CLIENT_ID
+  const clientSecret = env.GITHUB_CLIENT_SECRET
+  const { user: providerUser } = await github.users({ options: { clientSecret, clientId }, req })
   
   const profile = {
     id: user.id,
@@ -42,8 +44,6 @@ router.get('/callback', async (req, env) => {
   
   await USERS.put(user.id, JSON.stringify(profile))
   
-  const clientId = env.GITHUB_CLIENT_ID
-  const clientSecret = env.GITHUB_CLIENT_SECRET
   const claims = { user_id: user?.id }
   const secret = env.JWT_SECRET
   const jwt = jwt.sign(claims, secret, { algorithm: "HS256", expiresIn: "365d" })
