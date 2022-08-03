@@ -25,7 +25,7 @@ router.all('*', withCookies, enrichRequest)
 router.get('/', (req, env) => json({ req }))
 
 
-router.get('/me', req => {
+router.get('/me', async req => {
   const token = req.cookies['__Session-worker.auth.providers-token']
   const jwt = await jwtVerify(token, new TextEncoder().encode(env.JWT_SECRET)).catch(err => {
       request.authErr = err.message
@@ -33,7 +33,7 @@ router.get('/me', req => {
   return json(jwt)
 })
 
-router.get('/me.jpg', req => {
+router.get('/me.jpg', async req => {
   const token = req.cookies['__Session-worker.auth.providers-token']
   const jwt = await jwtVerify(token, new TextEncoder().encode(env.JWT_SECRET)).catch(err => {
       request.authErr = err.message
