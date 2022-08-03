@@ -5,8 +5,6 @@ Template for Cloudflare Worker with GitHub OAuth
 Visit <https://oauth.do/login> to login
 
 
-
-
 ## [🚀 We're hiring!](https://careers.do/apply)
 [Driv.ly](https://driv.ly) is simple APIs to buy & sell cars online, funded by some of the [biggest names](https://twitter.com/TurnerNovak) in [automotive](https://fontinalis.com/team/#bill-ford) and [finance & insurance](https://www.detroit.vc)
 
