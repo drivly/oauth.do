@@ -53,7 +53,7 @@ router.get('/callback', async (req, env) => {
   
   const claims = { user_id: user?.id }
   const secret = env.JWT_SECRET
-  const token = jwt.sign(claims, secret, { algorithm: "HS256", expiresIn: "365d" })
+  const token = jwt.sign(claims, secret, { algorithm: "HS256", expiresIn: "24h" })
   
   return new Response(null, {
     status: 302,
