@@ -26,7 +26,11 @@ router.get('/', (req, env) => json({ req }))
 
 
 router.get('/me', withCookies, req => {
-  return json(req.cookies)
+  const token = req.cookies['__Session-worker.auth.providers-token']
+  const jwt = await jwtVerify(token, new TextEncoder().encode(env.JWT_SECRET)).catch(err => {
+      request.authErr = err.message
+    })
+  return json(jwt)
 })
 
 
@@ -81,7 +85,7 @@ router.get('/callback', async (req, env) => {
 })
 
 
-router.get('/thanks', req => fetch(req))
+router.get('*', req => fetch(req))
 
 export default {
   fetch: router.handle
