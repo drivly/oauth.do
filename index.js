@@ -27,7 +27,7 @@ router.get('/', (req, env) => json({ req }))
 
 router.get('/me', async (req, env) => {
   const token = req.cookies['__Secure-user-token']
-  const jwt = await jwtVerify(token, new TextEncoder().encode(env.JWT_SECRET)).catch(err => {
+  const jwt = await jwtVerify(token, new TextEncoder().encode(env.JWT_SECRET)).catch(async err => {
     const loginUrl = await github.redirect({options:{clientId: env.GITHUB_CLIENT_ID}})
     return Response.redirect(loginUrl, 302)
   })
