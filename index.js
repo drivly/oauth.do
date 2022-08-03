@@ -31,7 +31,7 @@ router.get('/me', async (req, env) => {
     const loginUrl = await github.redirect({options:{clientId: env.GITHUB_CLIENT_ID}})
     return Response.redirect(loginUrl, 302)
   })
-  return json(jwt.payload.profile.image)
+  return json(jwt)
 })
 
 router.get('/me.jpg', async (req, env) => {
@@ -39,7 +39,7 @@ router.get('/me.jpg', async (req, env) => {
   const jwt = await jwtVerify(token, new TextEncoder().encode(env.JWT_SECRET)).catch(err => {
       request.authErr = err.message
     })
-  return fetch(jwt.image)
+  return fetch(jwt.payload.profile.image)
 })
 
 
