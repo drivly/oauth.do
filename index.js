@@ -26,7 +26,7 @@ router.get('/', (req, env) => json({ req }))
 
 
 router.get('/me', async (req, env) => {
-  const token = req.cookies['__Secure-user-token']
+  const token = req.cookies['__Session-worker.auth.providers-token']
   const jwt = await jwtVerify(token, new TextEncoder().encode(env.JWT_SECRET)).catch(async err => {
     const loginUrl = await github.redirect({options:{clientId: env.GITHUB_CLIENT_ID}})
     return Response.redirect(loginUrl, 302)
@@ -35,7 +35,7 @@ router.get('/me', async (req, env) => {
 })
 
 router.get('/me.jpg', async (req, env) => {
-  const token = req.cookies['__Secure-user-token']
+  const token = req.cookies['__Session-worker.auth.providers-token']
   const jwt = await jwtVerify(token, new TextEncoder().encode(env.JWT_SECRET)).catch(err => {
       return fetch('https://github.com/drivly/oauth.do/raw/main/GetStartedWithGithub.png')
     })
@@ -86,7 +86,7 @@ router.get('/callback', async (req, env) => {
     status: 302,
     headers: {
       location: '/thanks',
-      "Set-Cookie": `__Secure-user-token=${token}; expires=2147483647; path=/;`,
+      "Set-Cookie": `__Session-worker.auth.providers-token=${token}; expires=2147483647; path=/;`,
     }
   })
   
