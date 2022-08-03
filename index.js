@@ -53,13 +53,13 @@ router.get('/callback', async (req, env) => {
   
   const claims = { user_id: user?.id }
   const secret = env.JWT_SECRET
-  const jwt = jwt.sign(claims, secret, { algorithm: "HS256", expiresIn: "365d" })
+  const token = jwt.sign(claims, secret, { algorithm: "HS256", expiresIn: "365d" })
   
   return new Response(null, {
     status: 302,
     headers: {
       location: '/thanks',
-      "Set-Cookie": `__Session-worker.auth.providers-token=${jwt}; expires=${now.toUTCString()}; path=/;`,
+      "Set-Cookie": `__Session-worker.auth.providers-token=${token}; expires=${now.toUTCString()}; path=/;`,
     }
   })
   
