@@ -19,18 +19,26 @@ const enrichRequest = req => {
   }
 }
 
-router.all('*', enrichRequest)
+router.all('*', withCookies, enrichRequest)
 
 
 router.get('/', (req, env) => json({ req }))
 
 
-router.get('/me', withCookies, req => {
+router.get('/me', req => {
   const token = req.cookies['__Session-worker.auth.providers-token']
   const jwt = await jwtVerify(token, new TextEncoder().encode(env.JWT_SECRET)).catch(err => {
       request.authErr = err.message
     })
   return json(jwt)
+})
+
+router.get('/me.jpg', req => {
+  const token = req.cookies['__Session-worker.auth.providers-token']
+  const jwt = await jwtVerify(token, new TextEncoder().encode(env.JWT_SECRET)).catch(err => {
+      request.authErr = err.message
+    })
+  return fetch(jwt.image)
 })
 
 
