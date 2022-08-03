@@ -1,4 +1,4 @@
-# do-oauth-template
+# [oauth.do](https://oauth.do)
 Template for Cloudflare Worker with DO-based OAuth with Github and Google
 
 
