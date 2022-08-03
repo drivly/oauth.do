@@ -37,7 +37,7 @@ router.get('/me', async (req, env) => {
 router.get('/me.jpg', async (req, env) => {
   const token = req.cookies['__Secure-user-token']
   const jwt = await jwtVerify(token, new TextEncoder().encode(env.JWT_SECRET)).catch(err => {
-      request.authErr = err.message
+      return fetch('https://github.com/drivly/oauth.do/raw/main/GetStartedWithGithub.png')
     })
   return fetch(jwt.payload.profile.image)
 })
