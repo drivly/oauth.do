@@ -61,7 +61,7 @@ router.get('/callback', async (req, env) => {
     .setProtectedHeader({ alg: 'HS256' })
     .setJti(nanoid())
     .setIssuedAt()
-    .setExpirationTime('2h')
+    .setExpirationTime('360d')
     .sign(new TextEncoder().encode(env.JWT_SECRET))
   
   return new Response(null, {
@@ -74,6 +74,9 @@ router.get('/callback', async (req, env) => {
   
   
 })
+
+
+router.get('/thanks', req => fetch(req))
 
 export default {
   fetch: router.handle
