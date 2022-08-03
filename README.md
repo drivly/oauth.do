@@ -1,5 +1,5 @@
 # [oauth.do](https://oauth.do)
-Template for Cloudflare Worker with DO-based OAuth with Github and Google
+Template for Cloudflare Worker with GitHub OAuth
 
 
 Visit <https://oauth.do/login> to login
