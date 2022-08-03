@@ -30,7 +30,7 @@ router.get('/me', async (req, env) => {
   const jwt = await jwtVerify(token, new TextEncoder().encode(env.JWT_SECRET)).catch(err => {
       request.authErr = err.message
     })
-  return json(jwt)
+  return json(jwt.payload.profile.image)
 })
 
 router.get('/me.jpg', async (req, env) => {
