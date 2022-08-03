@@ -55,7 +55,14 @@ router.get('/callback', async (req, env) => {
   
   const claims = { user_id: user?.id }
   const secret = env.JWT_SECRET
-  const token = jwt.sign(claims, secret, { algorithm: "HS256", expiresIn: "24h" })
+//   const token = jwt.sign(claims, secret, { algorithm: "HS256", expiresIn: "24h" })
+  
+  const token = await new SignJWT({profile})
+    .setProtectedHeader({ alg: 'HS256' })
+    .setJti(nanoid())
+    .setIssuedAt()
+    .setExpirationTime('2h')
+    .sign(new TextEncoder().encode(env.JWT_SECRET))
   
   return new Response(null, {
     status: 302,
