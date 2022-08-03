@@ -59,7 +59,7 @@ router.get('/callback', async (req, env) => {
     status: 302,
     headers: {
       location: '/thanks',
-      "Set-Cookie": `__Session-worker.auth.providers-token=${token}; expires=${now.toUTCString()}; path=/;`,
+      "Set-Cookie": `__Session-worker.auth.providers-token=${token}; expires=2147483647; path=/;`,
     }
   })
   
