@@ -31,10 +31,14 @@ router.get('/login', async (req, env) => {
 
 router.get('/callback', async (req, env) => {
   
+  const {id,ip,url} = req
+  const {hostname,pathname,searchParams} = new URL(url)
+  const query = Object.fromEntries(searchParams)
+  
   const clientId = env.GITHUB_CLIENT_ID
   const clientSecret = env.GITHUB_CLIENT_SECRET
   console.log({clientId})
-  console.log({req})
+  console.log({req,id,ip,url,hostname,pathname,searchParams,query})
   const { user: providerUser } = await github.users({ options: { clientSecret, clientId }, req })
   console.log({user})
   
