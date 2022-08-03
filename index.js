@@ -49,7 +49,7 @@ router.get('/callback', async (req, env) => {
     email: user.email,
   }
   
-  await env.USERS.put(user.id, JSON.stringify(profile))
+  await env.USERS.put(user.id, JSON.stringify({profile,user}))
   
   const claims = { user_id: user?.id }
   const secret = env.JWT_SECRET
