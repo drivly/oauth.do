@@ -26,7 +26,7 @@ router.get('/', (req, env) => json({ req }))
 
 
 router.get('/me', async (req, env) => {
-  const token = req.cookies['__Session-worker.auth.providers-token']
+  const token = req.cookies['__Secure-user-token']
   const jwt = await jwtVerify(token, new TextEncoder().encode(env.JWT_SECRET)).catch(err => {
       request.authErr = err.message
     })
@@ -34,7 +34,7 @@ router.get('/me', async (req, env) => {
 })
 
 router.get('/me.jpg', async (req, env) => {
-  const token = req.cookies['__Session-worker.auth.providers-token']
+  const token = req.cookies['__Secure-user-token']
   const jwt = await jwtVerify(token, new TextEncoder().encode(env.JWT_SECRET)).catch(err => {
       request.authErr = err.message
     })
@@ -85,7 +85,7 @@ router.get('/callback', async (req, env) => {
     status: 302,
     headers: {
       location: '/thanks',
-      "Set-Cookie": `__Session-worker.auth.providers-token=${token}; expires=2147483647; path=/;`,
+      "Set-Cookie": `__Secure-user-token=${token}; expires=2147483647; path=/;`,
     }
   })
   
