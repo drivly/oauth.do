@@ -1,5 +1,5 @@
 import { Router } from 'itty-router'
-import { error, json, withContent, withParams } from 'itty-router-extras'
+import { error, json, withCookies, withContent, withParams } from 'itty-router-extras'
 import { github, google } from 'worker-auth-providers'
 import { nanoid } from 'nanoid'
 import { SignJWT, jwtVerify } from 'jose'
@@ -23,6 +23,11 @@ router.all('*', enrichRequest)
 
 
 router.get('/', (req, env) => json({ req }))
+
+
+router.get('/me', withCookies, req => {
+  return json(req.cookies)
+})
 
 
 router.get('/login', async (req, env) => {
