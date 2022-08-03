@@ -15,7 +15,7 @@ const enrichRequest = req => {
   req.recentInteractions = recentInteractions[req.ip]
   req.timestamp = new Date().toISOString()
   if(req.recentInteractions > 100) {
-    return error(429, { error: 'Over Rate Limit - Try again soon' })
+    return error(429, { error: 'Over Rate Limit - Try again later' })
   }
 }
 
@@ -25,7 +25,7 @@ router.all('*', withCookies, enrichRequest)
 router.get('/', (req, env) => json({ req }))
 
 
-router.get('/me', async req => {
+router.get('/me', async (req, env) => {
   const token = req.cookies['__Session-worker.auth.providers-token']
   const jwt = await jwtVerify(token, new TextEncoder().encode(env.JWT_SECRET)).catch(err => {
       request.authErr = err.message
@@ -33,7 +33,7 @@ router.get('/me', async req => {
   return json(jwt)
 })
 
-router.get('/me.jpg', async req => {
+router.get('/me.jpg', async (req, env) => {
   const token = req.cookies['__Session-worker.auth.providers-token']
   const jwt = await jwtVerify(token, new TextEncoder().encode(env.JWT_SECRET)).catch(err => {
       request.authErr = err.message
