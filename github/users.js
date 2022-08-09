@@ -1,5 +1,5 @@
-import { ConfigError, ProviderGetUserError, TokenError } from './utils/errors';
-import { parseQuerystring } from './utils/helpers';
+import { ConfigError, ProviderGetUserError, TokenError } from './errors';
+import { parseQuerystring } from './helpers';
 
 async function getTokensFromCode(code, { clientId, clientSecret }) {
   const params = {
