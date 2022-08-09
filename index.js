@@ -1,7 +1,7 @@
 import { Router } from 'itty-router'
 import { error, json, withCookies, withContent, withParams } from 'itty-router-extras'
 // import { github, google } from 'worker-auth-providers'
-import { github } from '.'
+import github from './github'
 import { nanoid } from 'nanoid'
 import { SignJWT, jwtVerify } from 'jose'
 // import jwt from 'jsonwebtoken'
