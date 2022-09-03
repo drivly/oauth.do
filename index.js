@@ -10,7 +10,7 @@ const router = Router()
 const recentInteractions = {}
 
 const enrichRequest = req => {
-  req.id = req.headers.get('CF-Request-ID') + '-' + req.cf.colo
+  req.id = req.headers.get('CF-Ray') + '-' + req.cf.colo
   req.ip = req.headers.get('CF-Connecting-IP')
   recentInteractions[req.ip] = recentInteractions[req.ip] ? recentInteractions[req.ip] + 1 : 1
   req.recentInteractions = recentInteractions[req.ip]
