@@ -1,9 +1,8 @@
 import { Router } from 'itty-router'
 import { error, json, withCookies } from 'itty-router-extras'
-// import { github, google } from 'worker-auth-providers'
-import github from './github'
+import { jwtVerify, SignJWT } from 'jose'
 import { nanoid } from 'nanoid'
-import { SignJWT, jwtVerify } from 'jose'
+import github from './github'
 
 const router = Router()
 const recentInteractions = {}
