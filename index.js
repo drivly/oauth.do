@@ -30,8 +30,7 @@ router.get('/me', async (req, env) => {
     const jwt = await jwtVerify(token, new TextEncoder().encode(env.JWT_SECRET))
     return json({ req, token, jwt })
   } catch {
-    const loginUrl = await github.redirect({ options: { clientId: env.GITHUB_CLIENT_ID } })
-    return Response.redirect(loginUrl, 302)
+    return loginRedirect(req, env)
   }
 })
 
@@ -46,10 +45,15 @@ router.get('/me.jpg', async (req, env) => {
 })
 
 
-router.get('/login', async (req, env) => {
-  const loginUrl = await github.redirect({ options: { clientId: env.GITHUB_CLIENT_ID } })
+router.get('/login', loginRedirect)
+
+async function loginRedirect(req, env) {
+  const referer = req.headers.get('referer') || "/thanks"
+  const options = { clientId: env.GITHUB_CLIENT_ID }
+  options.state = crypto.randomUUID()
+  const [loginUrl] = await Promise.all([github.redirect({ options }), env.REDIRECTS.put(options.state, referer, { expirationTtl: 300 })])
   return Response.redirect(loginUrl, 302)
-})
+}
 
 
 router.get('/logout', async (req, env) => {
@@ -65,14 +69,24 @@ router.get('/logout', async (req, env) => {
 
 router.get('/callback', async (req, env) => {
   const { id, ip, url } = req
+  const { searchParams } = new URL(url)
 
+  const error = searchParams.get('error')
+  if (error) {
+    return new Response(error, {
+      status: 401,
+    })
+  }
+  const state = searchParams.get('state')
   const clientId = env.GITHUB_CLIENT_ID
   const clientSecret = env.GITHUB_CLIENT_SECRET
   console.log({ clientId })
   console.log({ req, id, ip, url })
-  const { user } = await github.users({ options: { clientSecret, clientId }, request: { url } })
-  console.log({ user })
 
+  let [users, location] = await Promise.all([github.users({ options: { clientSecret, clientId }, request: { url } }), env.REDIRECTS.get(state)])
+  const user = users.user
+  location = location || '/thanks'
+  console.log({ user })
   const profile = {
     id: user.id,
     name: user.name,
@@ -80,19 +94,21 @@ router.get('/callback', async (req, env) => {
     email: user.email,
   }
 
-  await env.USERS.put(user.id, JSON.stringify({ profile, user }, null, 2))
+  const [token] = await Promise.all([
+    new SignJWT({ profile })
+      .setProtectedHeader({ alg: 'HS256' })
+      .setJti(nanoid())
+      .setIssuedAt()
+      .setExpirationTime('360d')
+      .sign(new TextEncoder().encode(env.JWT_SECRET)),
 
-  const token = await new SignJWT({ profile })
-    .setProtectedHeader({ alg: 'HS256' })
-    .setJti(nanoid())
-    .setIssuedAt()
-    .setExpirationTime('360d')
-    .sign(new TextEncoder().encode(env.JWT_SECRET))
+    env.USERS.put(user.id.toString(), JSON.stringify({ profile, user }, null, 2))
+  ])
 
   return new Response(null, {
     status: 302,
     headers: {
-      location: '/thanks',
+      location,
       "Set-Cookie": `__Session-worker.auth.providers-token=${token}; expires=2147483647; path=/;`,
     }
   })

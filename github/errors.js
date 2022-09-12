@@ -6,36 +6,31 @@ export class UnknownError extends Error {
 }
 
 export class ConfigError extends UnknownError {
-	constructor() {
-		super();
-		this.name = 'ConfigError';
+	constructor({ message }) {
+		super({ name: 'ConfigError', message });
 	}
 }
 
 export class TokenError extends UnknownError {
-	constructor() {
-		super();
-		this.name = 'TokenError';
+	constructor({ message }) {
+		super({ name: 'TokenError', message });
 	}
 }
 
 export class ProviderGetUserError extends UnknownError {
-	constructor() {
-		super();
-		this.name = 'ProviderGetUserError';
+	constructor({ message }) {
+		super({ name: 'ProviderGetUserError', message });
 	}
 }
 
 export class ProviderSendOtpError extends UnknownError {
-	constructor() {
-		super();
-		this.name = 'ProviderSendOtpError';
+	constructor({ message }) {
+		super({ name: 'ProviderSendOtpError', message });
 	}
 }
 
 export class ProviderVerifyOtpError extends UnknownError {
-	constructor() {
-		super();
-		this.name = 'ProviderVerifyOtpError';
+	constructor({ message }) {
+		super({ name: 'ProviderVerifyOtpError', message });
 	}
 }

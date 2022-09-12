@@ -70,7 +70,7 @@ export default async function callback({ options, request }) {
   console.log('[code]', query.code);
   if (!query.code) {
     throw new ConfigError({
-      message: 'No code is paased!',
+      message: 'No code is passed!',
     });
   }
   const tokens = await getTokensFromCode(query.code, options);
