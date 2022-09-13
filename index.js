@@ -25,9 +25,10 @@ router.get('/', (req, env) => json({ req }))
 
 
 router.get('/me', async (req, env) => {
+  const { hostname } = new URL(req.url)
   const token = req.cookies['__Session-worker.auth.providers-token']
   try {
-    const jwt = await jwtVerify(token, new TextEncoder().encode(env.JWT_SECRET))
+    const jwt = await jwtVerify(token, new TextEncoder().encode(computeKey(hostname)))
     return json({ req, token, jwt })
   } catch {
     return loginRedirect(req, env)
@@ -35,9 +36,10 @@ router.get('/me', async (req, env) => {
 })
 
 router.get('/me.jpg', async (req, env) => {
+  const { hostname } = new URL(req.url)
   const token = req.cookies['__Session-worker.auth.providers-token']
   try {
-    const jwt = await jwtVerify(token, new TextEncoder().encode(env.JWT_SECRET))
+    const jwt = await jwtVerify(token, new TextEncoder().encode(computeKey(hostname)))
     return fetch(jwt?.payload?.profile?.image || 'https://github.com/drivly/oauth.do/raw/main/GetStartedWithGithub.png')
   } catch {
     return fetch('https://github.com/drivly/oauth.do/raw/main/GetStartedWithGithub.png')
@@ -48,10 +50,15 @@ router.get('/me.jpg', async (req, env) => {
 router.get('/login', loginRedirect)
 
 async function loginRedirect(req, env) {
+  const { searchParams } = new URL(req.url)
   const options = { clientId: env.GITHUB_CLIENT_ID, state: crypto.randomUUID() }
-  const redirect_uri = ''
+  const redirect_uri = searchParams.get('redirect_uri')
   const [loginUrl] = await Promise.all([github.redirect({ options }), env.REDIRECTS.put(options.state, redirect_uri, { expirationTtl: 300 })])
   return Response.redirect(loginUrl, 302)
+}
+
+function computeKey(env, hostname) {
+  return crypto.createHash('md5').update(env.JWT_SECRET + hostname).digest('hex');
 }
 
 
@@ -68,7 +75,7 @@ router.get('/logout', async (req, env) => {
 
 router.get('/callback', async (req, env) => {
   const { id, ip, url } = req
-  const { searchParams } = new URL(url)
+  const { hostname, searchParams } = new URL(url)
 
   const error = searchParams.get('error')
   if (error) {
@@ -99,7 +106,7 @@ router.get('/callback', async (req, env) => {
       .setJti(nanoid())
       .setIssuedAt()
       .setExpirationTime('360d')
-      .sign(new TextEncoder().encode(env.JWT_SECRET)),
+      .sign(new TextEncoder().encode(computeKey(hostname))),
 
     env.USERS.put(user.id.toString(), JSON.stringify({ profile, user }, null, 2))
   ])
