@@ -48,10 +48,9 @@ router.get('/me.jpg', async (req, env) => {
 router.get('/login', loginRedirect)
 
 async function loginRedirect(req, env) {
-  const referer = req.headers.get('referer') || "/thanks"
-  const options = { clientId: env.GITHUB_CLIENT_ID }
-  options.state = crypto.randomUUID()
-  const [loginUrl] = await Promise.all([github.redirect({ options }), env.REDIRECTS.put(options.state, referer, { expirationTtl: 300 })])
+  const options = { clientId: env.GITHUB_CLIENT_ID, state: crypto.randomUUID() }
+  const redirect_uri = ''
+  const [loginUrl] = await Promise.all([github.redirect({ options }), env.REDIRECTS.put(options.state, redirect_uri, { expirationTtl: 300 })])
   return Response.redirect(loginUrl, 302)
 }
 
