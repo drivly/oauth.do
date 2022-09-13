@@ -3,6 +3,7 @@ import { error, json, withCookies } from 'itty-router-extras'
 import { jwtVerify, SignJWT } from 'jose'
 import { nanoid } from 'nanoid'
 import github from './github'
+import { sha1 } from 'sha1'
 
 const router = Router()
 const recentInteractions = {}
@@ -28,7 +29,7 @@ router.get('/me', async (req, env) => {
   const { hostname } = new URL(req.url)
   const token = req.cookies['__Session-worker.auth.providers-token']
   try {
-    const jwt = await jwtVerify(token, new TextEncoder().encode(computeKey(hostname)))
+    const jwt = await jwtVerify(token, new TextEncoder().encode(sha1(env.JWT_SECRET + hostname)))
     return json({ req, token, jwt })
   } catch {
     return loginRedirect(req, env)
@@ -39,7 +40,7 @@ router.get('/me.jpg', async (req, env) => {
   const { hostname } = new URL(req.url)
   const token = req.cookies['__Session-worker.auth.providers-token']
   try {
-    const jwt = await jwtVerify(token, new TextEncoder().encode(computeKey(hostname)))
+    const jwt = await jwtVerify(token, new TextEncoder().encode(sha1(env.JWT_SECRET + hostname)))
     return fetch(jwt?.payload?.profile?.image || 'https://github.com/drivly/oauth.do/raw/main/GetStartedWithGithub.png')
   } catch {
     return fetch('https://github.com/drivly/oauth.do/raw/main/GetStartedWithGithub.png')
@@ -55,10 +56,6 @@ async function loginRedirect(req, env) {
   const redirect_uri = searchParams.get('redirect_uri')
   const [loginUrl] = await Promise.all([github.redirect({ options }), env.REDIRECTS.put(options.state, redirect_uri, { expirationTtl: 300 })])
   return Response.redirect(loginUrl, 302)
-}
-
-function computeKey(env, hostname) {
-  return crypto.createHash('md5').update(env.JWT_SECRET + hostname).digest('hex');
 }
 
 
@@ -106,7 +103,7 @@ router.get('/callback', async (req, env) => {
       .setJti(nanoid())
       .setIssuedAt()
       .setExpirationTime('360d')
-      .sign(new TextEncoder().encode(computeKey(hostname))),
+      .sign(new TextEncoder().encode(sha1(env.JWT_SECRET + hostname))),
 
     env.USERS.put(user.id.toString(), JSON.stringify({ profile, user }, null, 2))
   ])

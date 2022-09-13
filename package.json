@@ -39,10 +39,11 @@
     "itty-router-extras": "^0.4.2",
     "jose": "^4.8.3",
     "nanoid": "^4.0.0",
+    "sha1": "^1.1.1",
     "worker-auth-providers": "^0.0.10"
   },
   "devDependencies": {
     "prettier": "^2.7.1",
-    "wrangler": "^2.0.28"
+    "wrangler": "^2.1.3"
   }
 }
