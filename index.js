@@ -88,6 +88,13 @@ router.get('/callback', async (req, env) => {
 
   let [users, location] = await Promise.all([github.users({ options: { clientSecret, clientId }, request: { url } }), env.REDIRECTS.get(state)])
   const user = users.user
+
+  // TODO: bind to service for allowlist
+  if (location && !new URL(location).hostname.match(/\.(cf|do)$/i))
+    return new Response("Domain not allowed.", {
+      status: 403,
+    })
+
   location = location || '/thanks'
   console.log({ user })
   const profile = {
