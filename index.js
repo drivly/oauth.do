@@ -3,7 +3,7 @@ import { error, json, withCookies } from 'itty-router-extras'
 import { jwtVerify, SignJWT } from 'jose'
 import { nanoid } from 'nanoid'
 import github from './github'
-import { sha1 } from 'sha1'
+import sha1 from 'sha1'
 
 const router = Router()
 const recentInteractions = {}
