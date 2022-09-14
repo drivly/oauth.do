@@ -112,16 +112,20 @@ router.get('/callback', async (req, env) => {
       .setJti(nanoid())
       .setIssuedAt()
       .setExpirationTime('360d')
-      .sign(new TextEncoder().encode(sha1(env.JWT_SECRET + hostname))),
+      .sign(new TextEncoder().encode(sha1(env.JWT_SECRET + hostname)))
+      .then(token => `__Session-worker.auth.providers-token=${token}; expires=2147483647; path=/${domain && ("; Domain=" + domain)};`),
 
     env.USERS.put(user.id.toString(), JSON.stringify({ profile, user }, null, 2))
   ])
+
+  console.log({ token })
 
   return new Response(null, {
     status: 302,
     headers: {
       location,
-      "Set-Cookie": `__Session-worker.auth.providers-token=${token}; expires=2147483647; path=/${domain && (" ;Domain=" + domain)};`,
+      token,
+      "Set-Cookie": token,
     }
   })
 })
