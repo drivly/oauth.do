@@ -53,7 +53,7 @@ router.get('/login', loginRedirect)
 async function loginRedirect(req, env) {
   const { searchParams } = new URL(req.url)
   const options = { clientId: env.GITHUB_CLIENT_ID, state: crypto.randomUUID() }
-  const redirect_uri = searchParams.get('redirect_uri')
+  const redirect_uri = searchParams.get('redirect_uri') || ''
   const [loginUrl] = await Promise.all([github.redirect({ options }), env.REDIRECTS.put(options.state, redirect_uri, { expirationTtl: 300 })])
   return Response.redirect(loginUrl, 302)
 }
@@ -88,6 +88,7 @@ router.get('/callback', async (req, env) => {
 
   let [users, location] = await Promise.all([github.users({ options: { clientSecret, clientId }, request: { url } }), env.REDIRECTS.get(state)])
   const user = users.user
+  console.log({ user, location })
 
   // TODO: bind to service for allowlist
   if (location && !new URL(location).hostname.match(/\.(cf|do)$/i))
@@ -96,7 +97,6 @@ router.get('/callback', async (req, env) => {
     })
 
   location = location || '/thanks'
-  console.log({ user })
   const profile = {
     id: user.id,
     name: user.name,
