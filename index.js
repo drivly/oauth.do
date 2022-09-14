@@ -73,7 +73,6 @@ router.get('/logout', async (req, env) => {
 router.get('/callback', async (req, env) => {
   const { id, ip, url } = req
   const { hostname, searchParams } = new URL(url)
-
   const error = searchParams.get('error')
   if (error) {
     return new Response(error, {
@@ -98,7 +97,6 @@ router.get('/callback', async (req, env) => {
     })
   console.log({ domain })
 
-  location = location || '/thanks'
   const profile = {
     id: user.id,
     name: user.name,
@@ -112,20 +110,17 @@ router.get('/callback', async (req, env) => {
       .setJti(nanoid())
       .setIssuedAt()
       .setExpirationTime('360d')
-      .sign(new TextEncoder().encode(sha1(env.JWT_SECRET + hostname)))
-      .then(token => `__Session-worker.auth.providers-token=${token}; expires=2147483647; path=/${domain && ("; Domain=" + domain)};`),
-
+      .sign(new TextEncoder().encode(sha1(env.JWT_SECRET + hostname))),
     env.USERS.put(user.id.toString(), JSON.stringify({ profile, user }, null, 2))
   ])
 
-  console.log({ token })
-
   return new Response(null, {
     status: 302,
-    headers: {
-      location,
-      token,
-      "Set-Cookie": token,
+    headers: location ? {
+      location: new URL(`/oauthdocallback/${token}/${location}`, domain),
+    } : {
+      location: '/thanks',
+      "Set-Cookie": `__Session-worker.auth.providers-token=${token}; expires=2147483647; path=/;`
     }
   })
 })
