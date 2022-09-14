@@ -121,7 +121,7 @@ router.get('/callback', async (req, env) => {
     status: 302,
     headers: {
       location,
-      "Set-Cookie": `__Session-worker.auth.providers-token=${token}; expires=2147483647; path=/${domain && (" ;Domain=*." + domain)};`,
+      "Set-Cookie": `__Session-worker.auth.providers-token=${token}; expires=2147483647; path=/${domain && (" ;Domain=" + domain)};`,
     }
   })
 })
