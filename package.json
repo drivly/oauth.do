@@ -10,7 +10,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/drivly/kv.cf.git"
+    "url": "git+https://github.com/drivly/oauth.do.git"
   },
   "keywords": [
     "api",
@@ -25,7 +25,7 @@
   "author": "Nathan Clevenger",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/drivly/kv.cf/issues"
+    "url": "https://github.com/drivly/oauth.do/issues"
   },
   "prettier": {
     "trailingComma": "es5",
@@ -33,7 +33,7 @@
     "semi": false,
     "singleQuote": true
   },
-  "homepage": "https://github.com/drivly/kv.cf#readme",
+  "homepage": "https://github.com/drivly/oauth.do#readme",
   "dependencies": {
     "itty-router": "^2.6.1",
     "itty-router-extras": "^0.4.2",

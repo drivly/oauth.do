@@ -91,7 +91,8 @@ router.get('/callback', async (req, env) => {
   console.log({ user, location })
 
   // TODO: bind to service for allowlist
-  if (location && !new URL(location).hostname.match(/\.(cf|do)$/i))
+  const domain = location && new URL(location).hostname
+  if (domain && !domain.match(/\.(cf|do)$/i))
     return new Response("Domain not allowed.", {
       status: 403,
     })
@@ -119,7 +120,7 @@ router.get('/callback', async (req, env) => {
     status: 302,
     headers: {
       location,
-      "Set-Cookie": `__Session-worker.auth.providers-token=${token}; expires=2147483647; path=/;`,
+      "Set-Cookie": `__Session-worker.auth.providers-token=${token}; expires=2147483647; path=/${domain && (" ;Domain=" + domain)};`,
     }
   })
 })
