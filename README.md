@@ -27,7 +27,7 @@ sequenceDiagram
   participant O as database.do<br/>(oauth-do)
   D->>O: /login
   O->>github.com: /authorize
-  github.com-->>O: /callback
+  github.com-->>oauth.do: /callback
   oauth.do->>O: /login/callback
   O->>D: /api
 ```
