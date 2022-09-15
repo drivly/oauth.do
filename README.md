@@ -21,7 +21,14 @@ Visit <https://oauth.do/login> to login
     "claims": "database:edit"
 }
 ```
-
+```mermaid
+sequenceDiagram
+  database.do->>oauth-do: /login
+  oauth-do->>github: /authorize
+  github-->>oauth.do: /callback
+  oauth.do->>oauth-do: /login/callback
+  oauth-do->>database.do: /api
+```
 
 
 ## [🚀 We're hiring!](https://careers.do/apply)
