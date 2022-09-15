@@ -23,11 +23,13 @@ Visit <https://oauth.do/login> to login
 ```
 ```mermaid
 sequenceDiagram
-  database.do->>oauth-do: /login
-  oauth-do->>github: /authorize
-  github-->>oauth.do: /callback
-  oauth.do->>oauth-do: /login/callback
-  oauth-do->>database.do: /api
+  participant D as database.do
+  participant O as database.do<br/>(oauth-do)
+  D->>O: /login
+  O->>github.com: /authorize
+  github.com-->>O: /callback
+  oauth.do->>O: /login/callback
+  O->>D: /api
 ```
 
 
