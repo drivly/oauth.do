@@ -90,7 +90,8 @@ router.get('/callback', async (req, env) => {
   console.log({ user, location })
 
   // TODO: bind to service for allowlist
-  if (location && !new URL(location).hostname.match(/\.(cf|do)$/i))
+  const domain = location && new URL(location).hostname || hostname
+  if (!domain.match(/\.(cf|do)$/i))
     return new Response("Domain not allowed.", {
       status: 403,
     })
@@ -108,7 +109,7 @@ router.get('/callback', async (req, env) => {
       .setJti(nanoid())
       .setIssuedAt()
       .setExpirationTime('360d')
-      .sign(new TextEncoder().encode(sha1(env.JWT_SECRET + hostname))),
+      .sign(new TextEncoder().encode(sha1(env.JWT_SECRET + domain))),
     env.USERS.put(user.id.toString(), JSON.stringify({ profile, user }, null, 2))
   ])
 
