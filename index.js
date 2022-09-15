@@ -51,7 +51,9 @@ router.get('/me.jpg', async (req, env) => {
 router.get('/login', loginRedirect)
 
 async function loginRedirect(req, env) {
+  // TODO: Add CTX service bindings to get hostname & referrer
   const { searchParams } = new URL(req.url)
+  // TODO: If referrer has the same hostname as the current host of the req.url then that is the default redirect_ui, otherwise use hostname + '/api/'
   const options = { clientId: env.GITHUB_CLIENT_ID, state: crypto.randomUUID() }
   const redirect_uri = searchParams.get('redirect_uri') || ''
   const [loginUrl] = await Promise.all([github.redirect({ options }), env.REDIRECTS.put(options.state, redirect_uri, { expirationTtl: 300 })])
