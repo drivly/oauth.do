@@ -105,7 +105,7 @@ router.get('/callback', async (req, env) => {
       .sign(new TextEncoder().encode(sha1(env.JWT_SECRET + domain))),
     env.USERS.put(user.id.toString(), JSON.stringify({ profile, user }, null, 2))
   ])
-  await env.REDIRECTS.put(state, JSON.stringify({ location, token, expires }), { expirationTtl: 42 })
+  await env.REDIRECTS.put(state, JSON.stringify({ location, token, expires }), { expirationTtl: 60 })
   return new Response(null, {
     status: 302,
     headers: {
