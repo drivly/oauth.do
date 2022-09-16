@@ -29,7 +29,7 @@ sequenceDiagram
 - Once authorized, GitHub redirects the user back to:
 - `https://oauth.do/callback` which hits the `/callback` route in oauth-do, and is redirected back to the original domain:
 - `https://database.do/login/callback` which hits the `/login/callback` route in oauth-do, which then generates the JWT token, and redirects the user back to:
-- `https://database.do/api` which hits the `/api` route in database-do, except now, there is a cookie in the request header, which is then passed to the CTX service bindings on [ctx-do](https://github.com/drivly/ctx.do), where the JWT token is verified and decrypted, and the user object is returned:
+- `https://database.do/api` which hits the `/api` route in database-do, except now, there is a cookie in the request header, which is then passed to the CTX service bindings on [ctx-do](https://ctx.do), where the JWT token is verified and decrypted, and the user object is returned:
 
 ```json
 {
