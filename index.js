@@ -108,11 +108,9 @@ router.get('/callback', async (req, env) => {
   env.REDIRECTS.put(state, JSON.stringify({ location, token, expires }), { expirationTtl: 42 })
   return new Response(null, {
     status: 302,
-    headers: domain === 'oauth.do' ? {
-      location: '/thanks',
+    headers: {
+      location: domain === 'oauth.do' ? '/thanks' : `https://${domain}/login/callback?state=${state}`,
       "Set-Cookie": `${authCookie}=${token}; expires=${expires}; path=/;`
-    } : {
-      location: new URL(`/login/callback?state=${state}`),
     }
   })
 })
