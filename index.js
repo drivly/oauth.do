@@ -103,10 +103,9 @@ router.get('/callback', async (req, env) => {
       .setIssuedAt()
       .setExpirationTime('360d')
       .sign(new TextEncoder().encode(sha1(env.JWT_SECRET + domain))),
-    env.USERS.put(user.id.toString(), JSON.stringify({ profile, user }, null, 2)),
-    env.REDIRECTS.put(state, JSON.stringify({ location, token, expires }), { expirationTtl: 42 })
+    env.USERS.put(user.id.toString(), JSON.stringify({ profile, user }, null, 2))
   ])
-
+  env.REDIRECTS.put(state, JSON.stringify({ location, token, expires }), { expirationTtl: 42 })
   return new Response(null, {
     status: 302,
     headers: domain === 'oauth.do' ? {
