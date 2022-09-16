@@ -52,39 +52,27 @@ router.get('/me.jpg', async (req, env) => {
 router.get('/login', loginRedirect)
 
 async function loginRedirect(req, env) {
-  let { hostname, headers } = await env.CTX.fetch(req).then(res => res.json())
+  let { hostname, headers, query } = await env.CTX.fetch(req).then(res => res.json())
   const options = { clientId: env.GITHUB_CLIENT_ID, state: crypto.randomUUID() }
-  const location = headers?.referer && new URL(headers.referer).hostname === hostname ? headers.referer : `https://${hostname}/api`
+  const location = query?.redirect_uri && new URL(query.redirect_uri).hostname === hostname ? query.redirect_uri :
+    headers?.referer && new URL(headers.referer).hostname === hostname ? headers.referer : `https://${hostname}/api`
   const [loginUrl] = await Promise.all([github.redirect({ options }), env.REDIRECTS.put(options.state, location, { expirationTtl: 600 })])
   return Response.redirect(loginUrl, 302)
 }
 
 
 router.get('/callback', async (req, env) => {
-  const { id, ip, url } = req
-  const { hostname, searchParams } = new URL(url)
-  const error = searchParams.get('error')
-  if (error) {
-    return new Response(error, {
+  let { query, url } = await env.CTX.fetch(req).then(res => res.json())
+  if (query.error) {
+    return new Response(query.error, {
       status: 401,
     })
   }
-  const state = searchParams.get('state')
   const clientId = env.GITHUB_CLIENT_ID
   const clientSecret = env.GITHUB_CLIENT_SECRET
-  console.log({ clientId })
-  console.log({ req, id, ip, url })
 
-  let [users, location] = await Promise.all([github.users({ options: { clientSecret, clientId }, request: { url } }), env.REDIRECTS.get(state)])
+  let [users, location] = await Promise.all([github.users({ options: { clientSecret, clientId }, request: { url } }), env.REDIRECTS.get(query.state)])
   const user = users.user
-
-  // TODO: import a module for allowlist
-  const domain = location && new URL(location).hostname || hostname
-  if (!domain.match(/\.(cf|do)$/i))
-    return new Response("Domain not allowed.", {
-      status: 403,
-    })
-
   const profile = {
     id: user.id,
     name: user.name,
@@ -105,11 +93,11 @@ router.get('/callback', async (req, env) => {
       .sign(new TextEncoder().encode(sha1(env.JWT_SECRET + domain))),
     env.USERS.put(user.id.toString(), JSON.stringify({ profile, user }, null, 2))
   ])
-  await env.REDIRECTS.put(state + '2', JSON.stringify({ location, token, expires }), { expirationTtl: 60 })
+  await env.REDIRECTS.put(query.state + '2', JSON.stringify({ location, token, expires }), { expirationTtl: 60 })
   return new Response(null, {
     status: 302,
     headers: {
-      location: domain === 'oauth.do' ? '/thanks' : `https://${domain}/login/callback?state=${state}`,
+      location: domain === 'oauth.do' ? '/thanks' : `https://${domain}/login/callback?state=${query.state}`,
       "Set-Cookie": `${authCookie}=${token}; expires=${expires}; path=/;`
     }
   })
