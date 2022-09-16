@@ -94,6 +94,10 @@ router.get('/callback', async (req, env) => {
     email: user.email,
   }
 
+  let expires = new Date()
+  expires.setFullYear(expires.getFullYear() + 1)
+  expires = expires.valueOf()
+
   const [token] = await Promise.all([
     new SignJWT({ profile })
       .setProtectedHeader({ alg: 'HS256' })
@@ -102,14 +106,14 @@ router.get('/callback', async (req, env) => {
       .setExpirationTime('360d')
       .sign(new TextEncoder().encode(sha1(env.JWT_SECRET + domain))),
     env.USERS.put(user.id.toString(), JSON.stringify({ profile, user }, null, 2)),
-    env.REDIRECTS.put(options.state, { location, token }, { expirationTtl: 42 })
+    env.REDIRECTS.put(options.state, { location, token, expires }, { expirationTtl: 42 })
   ])
 
   return new Response(null, {
     status: 302,
     headers: domain === 'oauth.do' ? {
       location: '/thanks',
-      "Set-Cookie": `${authCookie}=${token}; expires=${future2038problem}; path=/;`
+      "Set-Cookie": `${authCookie}=${token}; expires=${expires}; path=/;`
     } : {
       location: new URL(`/login/callback?state=${state}`),
     }
@@ -119,12 +123,12 @@ router.get('/callback', async (req, env) => {
 
 router.get('/login/callback', async (req, env) => {
   const state = new URL(req.url).searchParams.get('state')
-  const { location, token } = await env.REDIRECTS.get(state)
+  const { location, token, expires } = await env.REDIRECTS.get(state)
   return new Response(null, {
     status: 302,
     headers: {
       location,
-      "Set-Cookie": `${authCookie}=${token}; expires=${future2038problem}; path=/;`,
+      "Set-Cookie": `${authCookie}=${token}; expires=${expires}; path=/;`,
     }
   })
 })
