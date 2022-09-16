@@ -80,6 +80,7 @@ router.get('/callback', async (req, env) => {
     email: user.email,
   }
 
+  const domain = location && new URL(location).hostname || hostname
   let expires = new Date()
   expires.setFullYear(expires.getFullYear() + 1)
   expires = expires.valueOf()
