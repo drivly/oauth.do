@@ -7,6 +7,8 @@ import sha1 from 'sha1'
 
 const router = Router()
 const recentInteractions = {}
+const authCookie = '__Session-worker.auth.providers-token'
+const future2038problem = 2147483647
 
 const enrichRequest = req => {
   req.id = req.headers.get('CF-Ray') + '-' + req.cf.colo
@@ -27,7 +29,7 @@ router.get('/', (req, env) => json({ req }))
 
 router.get('/me', async (req, env) => {
   const { hostname } = new URL(req.url)
-  const token = req.cookies['__Session-worker.auth.providers-token']
+  const token = req.cookies[authCookie]
   try {
     const jwt = await jwtVerify(token, new TextEncoder().encode(sha1(env.JWT_SECRET + hostname)))
     return json({ req, token, jwt })
@@ -38,7 +40,7 @@ router.get('/me', async (req, env) => {
 
 router.get('/me.jpg', async (req, env) => {
   const { hostname } = new URL(req.url)
-  const token = req.cookies['__Session-worker.auth.providers-token']
+  const token = req.cookies[authCookie]
   try {
     const jwt = await jwtVerify(token, new TextEncoder().encode(sha1(env.JWT_SECRET + hostname)))
     return fetch(jwt?.payload?.profile?.image || 'https://github.com/drivly/oauth.do/raw/main/GetStartedWithGithub.png')
@@ -51,25 +53,12 @@ router.get('/me.jpg', async (req, env) => {
 router.get('/login', loginRedirect)
 
 async function loginRedirect(req, env) {
-  // TODO: Add CTX service bindings to get hostname & referrer
-  const { searchParams } = new URL(req.url)
-  // TODO: If referrer has the same hostname as the current host of the req.url then that is the default redirect_ui, otherwise use hostname + '/api/'
+  let { hostname, referer } = await env.CTX.fetch(req).then(res => res.json())
   const options = { clientId: env.GITHUB_CLIENT_ID, state: crypto.randomUUID() }
-  const redirect_uri = searchParams.get('redirect_uri') || ''
-  const [loginUrl] = await Promise.all([github.redirect({ options }), env.REDIRECTS.put(options.state, redirect_uri, { expirationTtl: 300 })])
+  const location = new URL(referer).hostname === hostname ? referer : `https://${hostname}/api`
+  const [loginUrl] = await Promise.all([github.redirect({ options }), env.REDIRECTS.put(options.state, { location }, { expirationTtl: 600 })])
   return Response.redirect(loginUrl, 302)
 }
-
-
-router.get('/logout', async (req, env) => {
-  return new Response(null, {
-    status: 302,
-    headers: {
-      location: '/',
-      "Set-Cookie": `__Session-worker.auth.providers-token=; expires=499162920; path=/;`,
-    }
-  })
-})
 
 
 router.get('/callback', async (req, env) => {
@@ -89,9 +78,9 @@ router.get('/callback', async (req, env) => {
 
   let [users, location] = await Promise.all([github.users({ options: { clientSecret, clientId }, request: { url } }), env.REDIRECTS.get(state)])
   const user = users.user
-  console.log({ user, location })
+  location = location.location
 
-  // TODO: bind to service for allowlist
+  // TODO: import a module for allowlist
   const domain = location && new URL(location).hostname || hostname
   if (!domain.match(/\.(cf|do)$/i))
     return new Response("Domain not allowed.", {
@@ -112,16 +101,41 @@ router.get('/callback', async (req, env) => {
       .setIssuedAt()
       .setExpirationTime('360d')
       .sign(new TextEncoder().encode(sha1(env.JWT_SECRET + domain))),
-    env.USERS.put(user.id.toString(), JSON.stringify({ profile, user }, null, 2))
+    env.USERS.put(user.id.toString(), JSON.stringify({ profile, user }, null, 2)),
+    env.REDIRECTS.put(options.state, { location, token }, { expirationTtl: 42 })
   ])
 
   return new Response(null, {
     status: 302,
-    headers: location ? {
-      location: new URL(`/oauthdocallback/${token}/${location}`, location),
-    } : {
+    headers: domain === 'oauth.do' ? {
       location: '/thanks',
-      "Set-Cookie": `__Session-worker.auth.providers-token=${token}; expires=2147483647; path=/;`
+      "Set-Cookie": `${authCookie}=${token}; expires=${future2038problem}; path=/;`
+    } : {
+      location: new URL(`/login/callback?state=${state}`),
+    }
+  })
+})
+
+
+router.get('/login/callback', async (req, env) => {
+  const state = new URL(req.url).searchParams.get('state')
+  const { location, token } = await env.REDIRECTS.get(state)
+  return new Response(null, {
+    status: 302,
+    headers: {
+      location,
+      "Set-Cookie": `${authCookie}=${token}; expires=${future2038problem}; path=/;`,
+    }
+  })
+})
+
+
+router.get('/logout', async (req, env) => {
+  return new Response(null, {
+    status: 302,
+    headers: {
+      location: '/',
+      "Set-Cookie": `${authCookie}=; expires=499162920; path=/;`,
     }
   })
 })
