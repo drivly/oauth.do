@@ -8,7 +8,6 @@ import sha1 from 'sha1'
 const router = Router()
 const recentInteractions = {}
 const authCookie = '__Session-worker.auth.providers-token'
-const future2038problem = 2147483647
 
 const enrichRequest = req => {
   req.id = req.headers.get('CF-Ray') + '-' + req.cf.colo
@@ -53,9 +52,9 @@ router.get('/me.jpg', async (req, env) => {
 router.get('/login', loginRedirect)
 
 async function loginRedirect(req, env) {
-  let { hostname, referer } = await env.CTX.fetch(req).then(res => res.json())
+  let { hostname, headers } = await env.CTX.fetch(req).then(res => res.json())
   const options = { clientId: env.GITHUB_CLIENT_ID, state: crypto.randomUUID() }
-  const location = new URL(referer).hostname === hostname ? referer : `https://${hostname}/api`
+  const location = headers?.referer && new URL(headers.referer).hostname === hostname ? headers.referer : `https://${hostname}/api`
   const [loginUrl] = await Promise.all([github.redirect({ options }), env.REDIRECTS.put(options.state, { location }, { expirationTtl: 600 })])
   return Response.redirect(loginUrl, 302)
 }
