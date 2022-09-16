@@ -101,11 +101,11 @@ router.get('/callback', async (req, env) => {
       .setProtectedHeader({ alg: 'HS256' })
       .setJti(nanoid())
       .setIssuedAt()
-      .setExpirationTime('360d')
+      .setExpirationTime(expires)
       .sign(new TextEncoder().encode(sha1(env.JWT_SECRET + domain))),
     env.USERS.put(user.id.toString(), JSON.stringify({ profile, user }, null, 2))
   ])
-  await env.REDIRECTS.put(state, JSON.stringify({ location, token, expires }), { expirationTtl: 60 })
+  await env.REDIRECTS.put(state + '2', JSON.stringify({ location, token, expires }), { expirationTtl: 60 })
   return new Response(null, {
     status: 302,
     headers: {
@@ -118,7 +118,7 @@ router.get('/callback', async (req, env) => {
 
 router.get('/login/callback', async (req, env) => {
   const state = new URL(req.url).searchParams.get('state')
-  const { location, token, expires } = await env.REDIRECTS.get(state).then(JSON.parse)
+  const { location, token, expires } = await env.REDIRECTS.get(state + '2').then(JSON.parse)
   return new Response(null, {
     status: 302,
     headers: {
