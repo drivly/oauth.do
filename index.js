@@ -55,7 +55,7 @@ async function loginRedirect(req, env) {
   let { hostname, headers } = await env.CTX.fetch(req).then(res => res.json())
   const options = { clientId: env.GITHUB_CLIENT_ID, state: crypto.randomUUID() }
   const location = headers?.referer && new URL(headers.referer).hostname === hostname ? headers.referer : `https://${hostname}/api`
-  const [loginUrl] = await Promise.all([github.redirect({ options }), env.REDIRECTS.put(options.state, { location }, { expirationTtl: 600 })])
+  const [loginUrl] = await Promise.all([github.redirect({ options }), env.REDIRECTS.put(options.state, location, { expirationTtl: 600 })])
   return Response.redirect(loginUrl, 302)
 }
 
@@ -77,7 +77,6 @@ router.get('/callback', async (req, env) => {
 
   let [users, location] = await Promise.all([github.users({ options: { clientSecret, clientId }, request: { url } }), env.REDIRECTS.get(state)])
   const user = users.user
-  location = location.location
 
   // TODO: import a module for allowlist
   const domain = location && new URL(location).hostname || hostname
@@ -105,7 +104,7 @@ router.get('/callback', async (req, env) => {
       .setExpirationTime('360d')
       .sign(new TextEncoder().encode(sha1(env.JWT_SECRET + domain))),
     env.USERS.put(user.id.toString(), JSON.stringify({ profile, user }, null, 2)),
-    env.REDIRECTS.put(options.state, { location, token, expires }, { expirationTtl: 42 })
+    env.REDIRECTS.put(options.state, JSON.stringify({ location, token, expires }), { expirationTtl: 42 })
   ])
 
   return new Response(null, {
@@ -122,7 +121,7 @@ router.get('/callback', async (req, env) => {
 
 router.get('/login/callback', async (req, env) => {
   const state = new URL(req.url).searchParams.get('state')
-  const { location, token, expires } = await env.REDIRECTS.get(state)
+  const { location, token, expires } = await env.REDIRECTS.get(state).then(JSON.parse)
   return new Response(null, {
     status: 302,
     headers: {
