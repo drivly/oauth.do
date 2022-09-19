@@ -29,7 +29,7 @@ router.get('/me', async (req, env) => {
   const { hostname } = new URL(req.url)
   const token = req.cookies[authCookie]
   try {
-    const jwt = await jwtVerify(token, await crypto.subtle.digest('SHA-384', new TextEncoder().encode(env.JWT_SECRET + hostname)))
+    const jwt = await jwtVerify(token, new Uint8Array(await crypto.subtle.digest('SHA-384', new TextEncoder().encode(env.JWT_SECRET + hostname))))
     return json({ req, token, jwt })
   } catch {
     return loginRedirect(req, env)
@@ -40,7 +40,7 @@ router.get('/me.jpg', async (req, env) => {
   const { hostname } = new URL(req.url)
   const token = req.cookies[authCookie]
   try {
-    const jwt = await jwtVerify(token, await crypto.subtle.digest('SHA-384', new TextEncoder().encode(env.JWT_SECRET + hostname)))
+    const jwt = await jwtVerify(token, new Uint8Array(await crypto.subtle.digest('SHA-384', new TextEncoder().encode(env.JWT_SECRET + hostname))))
     return fetch(jwt?.payload?.profile?.image || 'https://github.com/drivly/oauth.do/raw/main/GetStartedWithGithub.png')
   } catch {
     return fetch('https://github.com/drivly/oauth.do/raw/main/GetStartedWithGithub.png')
@@ -90,7 +90,7 @@ router.get('/callback', async (req, env) => {
       .setJti(nanoid())
       .setIssuedAt()
       .setExpirationTime(expires)
-      .sign(await crypto.subtle.digest('SHA-384', new TextEncoder().encode(env.JWT_SECRET + domain))),
+      .sign(new Uint8Array(await crypto.subtle.digest('SHA-384', new TextEncoder().encode(env.JWT_SECRET + domain)))),
     env.USERS.put(user.id.toString(), JSON.stringify({ profile, user }, null, 2))
   ])
   await env.REDIRECTS.put(query.state + '2', JSON.stringify({ location, token, expires }), { expirationTtl: 60 })
