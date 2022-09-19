@@ -3,7 +3,6 @@ import { error, json, withCookies } from 'itty-router-extras'
 import { jwtVerify, SignJWT } from 'jose'
 import { nanoid } from 'nanoid'
 import github from './github'
-import sha1 from 'sha1'
 
 const router = Router()
 const recentInteractions = {}
@@ -30,7 +29,8 @@ router.get('/me', async (req, env) => {
   const { hostname } = new URL(req.url)
   const token = req.cookies[authCookie]
   try {
-    const jwt = await jwtVerify(token, new TextEncoder().encode(sha1(env.JWT_SECRET + hostname)))
+    const key = await crypto.subtle.digest('SHA-384', this.env.JWT_SECRET + hostname)
+    const jwt = await jwtVerify(token, new TextEncoder().encode(key))
     return json({ req, token, jwt })
   } catch {
     return loginRedirect(req, env)
@@ -41,7 +41,8 @@ router.get('/me.jpg', async (req, env) => {
   const { hostname } = new URL(req.url)
   const token = req.cookies[authCookie]
   try {
-    const jwt = await jwtVerify(token, new TextEncoder().encode(sha1(env.JWT_SECRET + hostname)))
+    const key = await crypto.subtle.digest('SHA-384', this.env.JWT_SECRET + hostname)
+    const jwt = await jwtVerify(token, new TextEncoder().encode(key))
     return fetch(jwt?.payload?.profile?.image || 'https://github.com/drivly/oauth.do/raw/main/GetStartedWithGithub.png')
   } catch {
     return fetch('https://github.com/drivly/oauth.do/raw/main/GetStartedWithGithub.png')
@@ -85,13 +86,14 @@ router.get('/callback', async (req, env) => {
   expires.setFullYear(expires.getFullYear() + 1)
   expires = expires.valueOf()
 
+  const key = await crypto.subtle.digest('SHA-384', this.env.JWT_SECRET + domain)
   const [token] = await Promise.all([
     new SignJWT({ profile })
       .setProtectedHeader({ alg: 'HS256' })
       .setJti(nanoid())
       .setIssuedAt()
       .setExpirationTime(expires)
-      .sign(new TextEncoder().encode(sha1(env.JWT_SECRET + domain))),
+      .sign(new TextEncoder().encode(key)),
     env.USERS.put(user.id.toString(), JSON.stringify({ profile, user }, null, 2))
   ])
   await env.REDIRECTS.put(query.state + '2', JSON.stringify({ location, token, expires }), { expirationTtl: 60 })
