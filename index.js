@@ -29,8 +29,7 @@ router.get('/me', async (req, env) => {
   const { hostname } = new URL(req.url)
   const token = req.cookies[authCookie]
   try {
-    const jwt = await jwtVerify(token, new Uint8Array(await crypto.subtle.digest('SHA-384', new TextEncoder().encode(env.JWT_SECRET + hostname))))
-    return json({ req, token, jwt })
+    return json({ req, token, jwt: await verify(hostname, token, env) })
   } catch {
     return loginRedirect(req, env)
   }
@@ -40,7 +39,7 @@ router.get('/me.jpg', async (req, env) => {
   const { hostname } = new URL(req.url)
   const token = req.cookies[authCookie]
   try {
-    const jwt = await jwtVerify(token, new Uint8Array(await crypto.subtle.digest('SHA-384', new TextEncoder().encode(env.JWT_SECRET + hostname))))
+    const jwt = await verify(hostname, token, env)
     return fetch(jwt?.payload?.profile?.image || 'https://github.com/drivly/oauth.do/raw/main/GetStartedWithGithub.png')
   } catch {
     return fetch('https://github.com/drivly/oauth.do/raw/main/GetStartedWithGithub.png')
@@ -50,16 +49,23 @@ router.get('/me.jpg', async (req, env) => {
 
 router.get('/login', loginRedirect)
 
+async function verify(hostname, token, env) {
+  const domain = hostname.replace(/.*([^.]+.[^.]+)$/, '$1')
+  return await jwtVerify(token, new Uint8Array(await crypto.subtle.digest('SHA-512', new TextEncoder().encode(env.JWT_SECRET + domain))), { issuer: domain })
+}
+
 async function loginRedirect(req, env) {
   let { hostname, headers, query } = await env.CTX.fetch(req).then(res => res.json())
-  const options = { clientId: env.GITHUB_CLIENT_ID, state: crypto.randomUUID() }
   const location = query?.redirect_uri && new URL(query.redirect_uri).hostname === hostname ? query.redirect_uri :
     headers?.referer && new URL(headers.referer).hostname === hostname ? headers.referer : `https://${hostname}/api`
+  const options = { clientId: env.GITHUB_CLIENT_ID, state: crypto.randomUUID() }
   const [loginUrl] = await Promise.all([github.redirect({ options }), env.REDIRECTS.put(options.state, location, { expirationTtl: 600 })])
   return Response.redirect(loginUrl, 302)
 }
 
-
+/**
+ * Callback to oauth.do from external oauth provider
+ */
 router.get('/callback', async (req, env) => {
   let { query, url } = await env.CTX.fetch(req).then(res => res.json())
   if (query.error) {
@@ -80,7 +86,8 @@ router.get('/callback', async (req, env) => {
     email: user.email,
   }
 
-  const domain = location && new URL(location).hostname || hostname
+  const subdomain = location && new URL(location).hostname || hostname
+  const domain = subdomain.replace(/.*([^.]+.[^.]+)$/, '$1')
   let expires = new Date()
   expires.setFullYear(expires.getFullYear() + 1)
   expires = expires.valueOf()
@@ -90,21 +97,24 @@ router.get('/callback', async (req, env) => {
       .setProtectedHeader({ alg: 'HS256' })
       .setJti(nanoid())
       .setIssuedAt()
+      .setIssuer(domain)
       .setExpirationTime(expires)
-      .sign(new Uint8Array(await crypto.subtle.digest('SHA-384', new TextEncoder().encode(env.JWT_SECRET + domain)))),
+      .sign(new Uint8Array(await crypto.subtle.digest('SHA-512', new TextEncoder().encode(env.JWT_SECRET + domain)))),
     env.USERS.put(user.id.toString(), JSON.stringify({ profile, user }, null, 2))
   ])
   await env.REDIRECTS.put(query.state + '2', JSON.stringify({ location, token, expires }), { expirationTtl: 60 })
   return new Response(null, {
     status: 302,
     headers: {
-      location: domain === 'oauth.do' ? '/thanks' : `https://${domain}/login/callback?state=${query.state}`,
+      location: domain === 'oauth.do' ? '/thanks' : `https://${subdomain}/login/callback?state=${query.state}`,
       "Set-Cookie": `${authCookie}=${token}; expires=${expires}; path=/; domain=.${domain}`
     }
   })
 })
 
-
+/**
+ * Bound service method to set the login cookie
+ */
 router.get('/login/callback', async (req, env) => {
   const state = new URL(req.url).searchParams.get('state')
   const { location, token, expires } = await env.REDIRECTS.get(state + '2').then(JSON.parse)
@@ -112,18 +122,21 @@ router.get('/login/callback', async (req, env) => {
     status: 302,
     headers: {
       location,
-      "Set-Cookie": `${authCookie}=${token}; expires=${expires}; path=/; domain=.${new URL(req.url).hostname}`,
+      "Set-Cookie": `${authCookie}=${token}; expires=${expires}; path=/; domain=.${new URL(req.url).hostname.replace(/.*([^.]+.[^.]+)$/, '$1')}`,
     }
   })
 })
 
 
+/**
+ * Bound service method to clear the login cookie
+ */
 router.get('/logout', async (req, env) => {
   return new Response(null, {
     status: 302,
     headers: {
       location: '/',
-      "Set-Cookie": `${authCookie}=; expires=499162920; path=/; domain=${new URL(req.url).hostname}`,
+      "Set-Cookie": `${authCookie}=; expires=499162920; path=/; domain=.${new URL(req.url).hostname.replace(/.*([^.]+.[^.]+)$/, '$1')}`,
     }
   })
 })

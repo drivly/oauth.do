@@ -13,8 +13,11 @@ sequenceDiagram
   participant O as database.do<br/>(oauth-do)
   participant A as oauth.do
   D->>O: /login
-  O-)github.com: /login/oauth/authorize?
-  github.com-->>A: /callback
+  O->>A: /login
+  opt not logged in
+    A-)github.com: /login/oauth/authorize?
+    github.com-->>A: /callback
+  end
   A->>O: /login/callback
   Note over A,O: generate JWT token
   O->>D: /api
