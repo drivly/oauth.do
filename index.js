@@ -74,6 +74,7 @@ router.get('/callback', async (req, env) => {
   const user = users.user
   const profile = {
     id: user.id,
+    user: user.login,
     name: user.name,
     image: user.avatar_url,
     email: user.email,
