@@ -99,7 +99,7 @@ router.get('/callback', async (req, env) => {
     status: 302,
     headers: {
       location: domain === 'oauth.do' ? '/thanks' : `https://${domain}/login/callback?state=${query.state}`,
-      "Set-Cookie": `${authCookie}=${token}; expires=${expires}; path=/; domain=${domain}`
+      "Set-Cookie": `${authCookie}=${token}; expires=${expires}; path=/; domain=.${domain}`
     }
   })
 })
@@ -112,7 +112,7 @@ router.get('/login/callback', async (req, env) => {
     status: 302,
     headers: {
       location,
-      "Set-Cookie": `${authCookie}=${token}; expires=${expires}; path=/; domain=${new URL(req.url).hostname}`,
+      "Set-Cookie": `${authCookie}=${token}; expires=${expires}; path=/; domain=.${new URL(req.url).hostname}`,
     }
   })
 })
