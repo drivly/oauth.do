@@ -67,7 +67,7 @@ async function loginRedirect(req, env) {
   const token = req.cookies[authCookie]
   let jwt;
   if (token && (jwt = await verify(hostname, token, env)))
-    return hostname === location && new URL(location).hostname ?
+    return hostname === (location && new URL(location).hostname) ?
       cookieRedirect(location, token, jwt.payload.exp, req) :
       new Response(null, { status: 302, headers: { location: `/callback?state=${state}` } })
   const options = { clientId: env.GITHUB_CLIENT_ID, state }
