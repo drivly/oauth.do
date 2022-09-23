@@ -123,7 +123,7 @@ router.get('/callback', async (req, env) => {
     .setExpirationTime(expires)
     .sign(new Uint8Array(await crypto.subtle.digest('SHA-512', new TextEncoder().encode(env.JWT_SECRET + domain))))
 
-  await Promiase.all([
+  await Promise.all([
     env.USERS.put(user.id.toString(), JSON.stringify({ profile, user }, null, 2)),
     env.REDIRECTS.put(query.state + '2', JSON.stringify({ location, token, expires }), { expirationTtl: 60 }),
   ])
