@@ -13,7 +13,7 @@ sequenceDiagram
   participant O as database.do<br/>(oauth-do)
   participant A as oauth.do
   D->>O: /login
-  O->>A: /login
+  O->>A: /login?state=
   opt not logged in
     A-)github.com: /login/oauth/authorize?
     github.com-->>A: /callback
@@ -26,8 +26,9 @@ sequenceDiagram
   C--)D: return user object
 ```
 
-- Because other domains have a `*/login*` route to the oauth-do worker
-- `https://database.do/login` hits the `/login` route in oauth-do, and is redirected to the oauth provider:
+- Domains using `oauth.do` have a `*/login*` route bound to the oauth-do worker
+- `https://database.do/login` hits the `/login` route in oauth-do, and is redirected to the shared login service at `https://oauth.do/login`
+- If the user is not logged in, they are redirected to the oauth provider:
 - `https://github.com/login/oauth/authorize?`
 - Once authorized, GitHub redirects the user back to:
 - `https://oauth.do/callback` which hits the `/callback` route in oauth-do, and is redirected back to the original domain:

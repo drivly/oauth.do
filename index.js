@@ -19,6 +19,12 @@ const enrichRequest = req => {
   }
 }
 
+async function verify(hostname, token, env) {
+  const domain = hostname.replace(/.*\.([^.]+.[^.]+)$/, '$1')
+  const hash = await crypto.subtle.digest('SHA-512', new TextEncoder().encode(env.JWT_SECRET + domain))
+  return await jwtVerify(token, new Uint8Array(hash), { issuer: domain })
+}
+
 router.all('*', withCookies, enrichRequest)
 
 
@@ -31,7 +37,7 @@ router.get('/me', async (req, env) => {
   try {
     return json({ req, token, jwt: await verify(hostname, token, env) })
   } catch {
-    return loginRedirect(req, env)
+    return await loginRedirect(req, env)
   }
 })
 
@@ -40,34 +46,44 @@ router.get('/me.jpg', async (req, env) => {
   const token = req.cookies[authCookie]
   try {
     const jwt = await verify(hostname, token, env)
-    return fetch(jwt?.payload?.profile?.image || 'https://github.com/drivly/oauth.do/raw/main/GetStartedWithGithub.png')
+    return await fetch(jwt?.payload?.profile?.image || 'https://github.com/drivly/oauth.do/raw/main/GetStartedWithGithub.png')
   } catch {
-    return fetch('https://github.com/drivly/oauth.do/raw/main/GetStartedWithGithub.png')
+    return await fetch('https://github.com/drivly/oauth.do/raw/main/GetStartedWithGithub.png')
   }
 })
 
 /**
- * Double-bound login service endpoint
+ * Bound login service (also bound on oauth.do)
  */
 router.get('/login', loginRedirect)
 
-async function verify(hostname, token, env) {
-  const domain = hostname.replace(/.*\.([^.]+.[^.]+)$/, '$1')
-  return await jwtVerify(token, new Uint8Array(await crypto.subtle.digest('SHA-512', new TextEncoder().encode(env.JWT_SECRET + domain))), { issuer: domain })
-}
-
 async function loginRedirect(req, env) {
   let { hostname, headers, query } = await env.CTX.fetch(req).then(res => res.json())
-  const location = query?.redirect_uri && new URL(query.redirect_uri).hostname === hostname ? query.redirect_uri :
+  const location = query?.state && await env.REDIRECTS.get(query.state) ||
+    query?.redirect_uri && new URL(query.redirect_uri).hostname === hostname ? query.redirect_uri :
     headers?.referer && new URL(headers.referer).hostname === hostname ? headers.referer : `https://${hostname}/api`
   const token = req.cookies[authCookie]
   if (token) {
     const jwt = await verify(hostname, token, env)
-    if (jwt) return redirect(location, token, jwt.payload.exp, req)
+    if (jwt) return cookieRedirect(location, token, jwt.payload.exp, req)
   }
-  const options = { clientId: env.GITHUB_CLIENT_ID, state: crypto.randomUUID() }
-  const [loginUrl] = await Promise.all([github.redirect({ options }), env.REDIRECTS.put(options.state, location, { expirationTtl: 600 })])
-  return Response.redirect(loginUrl, 302)
+
+  const state = query?.state || crypto.randomUUID()
+  if (!query?.state) await env.REDIRECTS.put(state, location, { expirationTtl: 600 })
+  const options = { clientId: env.GITHUB_CLIENT_ID, state }
+  return Response.redirect(hostname.endsWith('oauth.do') ?
+    github.redirect({ options }) :
+    `https://oauth.do/login?state=${state}`, 302)
+}
+
+function cookieRedirect(location, token, expires, req) {
+  return new Response(null, {
+    status: 302,
+    headers: {
+      location,
+      "Set-Cookie": `${authCookie}=${token}; expires=${expires}; path=/; domain=.${new URL(req.url).hostname.replace(/.*\.([^.]+.[^.]+)$/, '$1')}`,
+    }
+  })
 }
 
 /**
@@ -99,17 +115,19 @@ router.get('/callback', async (req, env) => {
   expires.setFullYear(expires.getFullYear() + 1)
   expires = expires.valueOf()
 
-  const [token] = await Promise.all([
-    new SignJWT({ profile })
-      .setProtectedHeader({ alg: 'HS256' })
-      .setJti(nanoid())
-      .setIssuedAt()
-      .setIssuer(domain)
-      .setExpirationTime(expires)
-      .sign(new Uint8Array(await crypto.subtle.digest('SHA-512', new TextEncoder().encode(env.JWT_SECRET + domain)))),
-    env.USERS.put(user.id.toString(), JSON.stringify({ profile, user }, null, 2))
+  const token = await new SignJWT({ profile })
+    .setProtectedHeader({ alg: 'HS256' })
+    .setJti(nanoid())
+    .setIssuedAt()
+    .setIssuer(domain)
+    .setExpirationTime(expires)
+    .sign(new Uint8Array(await crypto.subtle.digest('SHA-512', new TextEncoder().encode(env.JWT_SECRET + domain))))
+
+  await Promiase.all([
+    env.USERS.put(user.id.toString(), JSON.stringify({ profile, user }, null, 2)),
+    env.REDIRECTS.put(query.state + '2', JSON.stringify({ location, token, expires }), { expirationTtl: 60 }),
   ])
-  await env.REDIRECTS.put(query.state + '2', JSON.stringify({ location, token, expires }), { expirationTtl: 60 })
+
   return new Response(null, {
     status: 302,
     headers: {
@@ -124,25 +142,14 @@ router.get('/callback', async (req, env) => {
  */
 router.get('/login/callback', async (req, env) => {
   let { location, token, expires } = await env.REDIRECTS.get(new URL(req.url).searchParams.get('state') + '2').then(JSON.parse)
-  return redirect(location, token, expires, req)
+  return cookieRedirect(location, token, expires, req)
 })
 
 
 /**
  * Bound service method to clear the login cookie
  */
-router.get('/logout', (req, env) => redirect('/', '', 499162920, req))
-
-
-function redirect(location, token, expires, req) {
-  return new Response(null, {
-    status: 302,
-    headers: {
-      location,
-      "Set-Cookie": `${authCookie}=${token}; expires=${expires}; path=/; domain=.${new URL(req.url).hostname.replace(/.*\.([^.]+.[^.]+)$/, '$1')}`,
-    }
-  })
-}
+router.get('/logout', (req, env) => cookieRedirect('/', '', 499162920, req))
 
 
 router.get('*', req => fetch(req))
