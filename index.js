@@ -122,7 +122,10 @@ router.get('/callback', async (req, env) => {
 /**
  * Bound service method to set the login cookie
  */
-router.get('/login/callback', async (req, env) => redirect(...(await env.REDIRECTS.get(new URL(req.url).searchParams.get('state') + '2').then(JSON.parse)), req))
+router.get('/login/callback', async (req, env) => {
+  let { location, token, expires } = await env.REDIRECTS.get(new URL(req.url).searchParams.get('state') + '2').then(JSON.parse)
+  return redirect(location, token, expires, req)
+})
 
 
 /**
