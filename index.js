@@ -41,6 +41,7 @@ router.get('/me', async (req, env) => {
   }
 })
 
+
 router.get('/me.jpg', async (req, env) => {
   const { hostname } = new URL(req.url)
   const token = req.cookies[authCookie]
@@ -51,6 +52,7 @@ router.get('/me.jpg', async (req, env) => {
     return await fetch('https://github.com/drivly/oauth.do/raw/main/GetStartedWithGithub.png')
   }
 })
+
 
 /**
  * Bound login service (also bound on oauth.do)
@@ -68,7 +70,7 @@ async function loginRedirect(req, env) {
   let jwt;
   if (token && (jwt = await verify(hostname, token, env)))
     return hostname === (location && new URL(location).hostname) ?
-      cookieRedirect(location, token, jwt.payload.exp, req) :
+      cookieRedirect(hostname === 'oauth.do' ? '/thanks' : location, token, jwt.payload.exp, req) :
       new Response(null, { status: 302, headers: { location: `/callback?state=${state}` } })
   const options = { clientId: env.GITHUB_CLIENT_ID, state }
   return Response.redirect(hostname === 'oauth.do' ?
@@ -85,6 +87,7 @@ function cookieRedirect(location, token, expires, req) {
     }
   })
 }
+
 
 /**
  * Callback to oauth.do from external oauth provider
@@ -137,6 +140,7 @@ router.get('/callback', async (req, env) => {
     }
   })
 })
+
 
 /**
  * Bound service method to set the login cookie
