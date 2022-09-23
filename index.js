@@ -60,7 +60,8 @@ router.get('/me.jpg', async (req, env) => {
 router.get('/login', loginRedirect)
 
 async function loginRedirect(req, env) {
-  let { hostname, headers, query } = await env.CTX.fetch(req).then(res => res.json())
+  const context = await env.CTX.fetch(req).then(res => res.json());
+  const { hostname, headers, query } = context
   const location = query?.state && await env.REDIRECTS.get(query.state) ||
     query?.redirect_uri && new URL(query.redirect_uri).hostname === hostname ? query.redirect_uri :
     headers?.referer && new URL(headers.referer).hostname === hostname ? headers.referer : `https://${hostname}/api`
@@ -71,7 +72,7 @@ async function loginRedirect(req, env) {
   if (token && (jwt = await verify(hostname, token, env)))
     return hostname === (location && new URL(location).hostname) ?
       cookieRedirect(hostname === 'oauth.do' ? '/thanks' : location, token, jwt.payload.exp, req) :
-      new Response(null, { status: 302, headers: { location: `/callback?state=${state}` } })
+      await callback(env, context)
   const options = { clientId: env.GITHUB_CLIENT_ID, state }
   return Response.redirect(hostname === 'oauth.do' ?
     github.redirect({ options }) :
@@ -92,8 +93,10 @@ function cookieRedirect(location, token, expires, req) {
 /**
  * Callback to oauth.do from external oauth provider
  */
-router.get('/callback', async (req, env) => {
-  let { query, url, user: contextUser } = await env.CTX.fetch(req).then(res => res.json())
+router.get('/callback', async (req, env) => await callback(env, await env.CTX.fetch(req).then(res => res.json())))
+
+async function callback(env, context) {
+  let { query, url, user: contextUser } = context
   if (query.error) {
     return new Response(query.error, {
       status: 401,
@@ -139,7 +142,7 @@ router.get('/callback', async (req, env) => {
       "Set-Cookie": `${authCookie}=${token}; expires=${expires}; path=/; domain=.${domain}`
     }
   })
-})
+}
 
 
 /**
