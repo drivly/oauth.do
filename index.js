@@ -62,16 +62,20 @@ async function loginRedirect(req, env) {
   const location = query?.state && await env.REDIRECTS.get(query.state) ||
     query?.redirect_uri && new URL(query.redirect_uri).hostname === hostname ? query.redirect_uri :
     headers?.referer && new URL(headers.referer).hostname === hostname ? headers.referer : `https://${hostname}/api`
+  const state = query?.state || crypto.randomUUID()
+  if (!query?.state) await env.REDIRECTS.put(state, location, { expirationTtl: 600 })
   const token = req.cookies[authCookie]
   if (token) {
     const jwt = await verify(hostname, token, env)
-    if (jwt) return cookieRedirect(location, token, jwt.payload.exp, req)
+    if (jwt) {
+      if (hostname === new URL(location).hostname)
+        return cookieRedirect(location, token, jwt.payload.exp, req)
+      else if (hostname === 'oauth.do')
+        return Response.redirect(`/callback?state=${state}`, 302);
+    }
   }
-
-  const state = query?.state || crypto.randomUUID()
-  if (!query?.state) await env.REDIRECTS.put(state, location, { expirationTtl: 600 })
   const options = { clientId: env.GITHUB_CLIENT_ID, state }
-  return Response.redirect(hostname.endsWith('oauth.do') ?
+  return Response.redirect(hostname === 'oauth.do' ?
     github.redirect({ options }) :
     `https://oauth.do/login?state=${state}`, 302)
 }
