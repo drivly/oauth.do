@@ -94,7 +94,7 @@ function cookieRedirect(location, token, expires, req) {
  * Callback to oauth.do from external oauth provider
  */
 router.get('/callback', async (req, env) => {
-  let { query, url, user } = await env.CTX.fetch(req).then(res => res.json())
+  let { query, url, user: contextUser } = await env.CTX.fetch(req).then(res => res.json())
   if (query.error) {
     return new Response(query.error, {
       status: 401,
@@ -104,8 +104,8 @@ router.get('/callback', async (req, env) => {
   const clientSecret = env.GITHUB_CLIENT_SECRET
 
   let [users, location] = await Promise.all([
-    !user?.authenticated && github.users({ options: { clientSecret, clientId }, request: { url } }), env.REDIRECTS.get(query.state)])
-  if (users) user = users.user
+    !contextUser?.authenticated && github.users({ options: { clientSecret, clientId }, request: { url } }), env.REDIRECTS.get(query.state)])
+  let user = (users || await env.USERS.get(contextUser.profile.id)).user
   const profile = {
     id: user.id,
     user: user.login,
