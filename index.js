@@ -69,10 +69,7 @@ async function loginRedirect(req, env) {
   if (token && (jwt = await verify(hostname, token, env)))
     return hostname === location && new URL(location).hostname ?
       cookieRedirect(location, token, jwt.payload.exp, req) :
-      new Response(null, {
-        status: 302,
-        headers: { location: `/callback?state=${state}` }
-      })
+      Response.redirect(`/callback?state=${state}`, 302)
   const options = { clientId: env.GITHUB_CLIENT_ID, state }
   return Response.redirect(hostname === 'oauth.do' ?
     github.redirect({ options }) :
@@ -104,7 +101,7 @@ router.get('/callback', async (req, env) => {
 
   let [users, location] = await Promise.all([
     !contextUser?.authenticated && github.users({ options: { clientSecret, clientId }, request: { url } }), env.REDIRECTS.get(query.state)])
-  const user = (users || await env.USERS.get(contextUser.profile.id)).user
+  const user = (users || await env.USERS.get(contextUser.profile.id).then(JSON.parse)).user
   const profile = {
     id: user.id,
     user: user.login,
