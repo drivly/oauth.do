@@ -62,13 +62,13 @@ router.get('/login', loginRedirect)
 async function loginRedirect(req, env) {
   const context = await env.CTX.fetch(req).then(res => res.json())
   const { hostname, headers, query } = context
-  const redirect = query?.state && await env.REDIRECTS.get(query.state)
+  const redirect = query?.state && await env.REDIRECTS.get(query.state).then(JSON.parse)
   const sendCookie = redirect ? redirect.sendCookie :
     query?.redirect_uri && new URL(query.redirect_uri).hostname === hostname ||
     !query?.redirect_uri && headers?.referer && new URL(headers.referer).hostname === hostname
   const location = redirect?.location || query?.redirect_uri || headers?.referer || `https://${hostname}/api`
   const state = query?.state || crypto.randomUUID()
-  if (!query?.state) await env.REDIRECTS.put(state, { location, sendCookie }, { expirationTtl: 600 })
+  if (!query?.state) await env.REDIRECTS.put(state, JSON.stringify({ location, sendCookie }), { expirationTtl: 600 })
   const token = req.cookies[authCookie]
   let jwt;
   if (token && (jwt = await verify(hostname, token, env)))
@@ -108,7 +108,7 @@ async function callback(env, context) {
   const clientSecret = env.GITHUB_CLIENT_SECRET
 
   let [users, redirect] = await Promise.all([
-    !contextUser?.authenticated && github.users({ options: { clientSecret, clientId }, request: { url } }), env.REDIRECTS.get(query.state)])
+    !contextUser?.authenticated && github.users({ options: { clientSecret, clientId }, request: { url } }), env.REDIRECTS.get(query.state).then(JSON.parse)])
   const { location, sendCookie } = redirect
   const user = (users || await env.USERS.get(contextUser.profile.id).then(JSON.parse)).user
   const profile = {
