@@ -60,18 +60,20 @@ router.get('/me.jpg', async (req, env) => {
 router.get('/login', loginRedirect)
 
 async function loginRedirect(req, env) {
-  const context = await env.CTX.fetch(req).then(res => res.json());
+  const context = await env.CTX.fetch(req).then(res => res.json())
   const { hostname, headers, query } = context
-  const location = query?.state && await env.REDIRECTS.get(query.state) ||
-    query?.redirect_uri && new URL(query.redirect_uri).hostname === hostname ? query.redirect_uri :
-    headers?.referer && new URL(headers.referer).hostname === hostname ? headers.referer : `https://${hostname}/api`
+  const redirect = query?.state && await env.REDIRECTS.get(query.state)
+  const sendCookie = redirect ? redirect.sendCookie :
+    query?.redirect_uri && new URL(query.redirect_uri).hostname === hostname ||
+    !query?.redirect_uri && headers?.referer && new URL(headers.referer).hostname === hostname
+  const location = redirect?.location || query?.redirect_uri || headers?.referer || `https://${hostname}/api`
   const state = query?.state || crypto.randomUUID()
-  if (!query?.state) await env.REDIRECTS.put(state, location, { expirationTtl: 600 })
+  if (!query?.state) await env.REDIRECTS.put(state, { location, sendCookie }, { expirationTtl: 600 })
   const token = req.cookies[authCookie]
   let jwt;
   if (token && (jwt = await verify(hostname, token, env)))
     return hostname === (location && new URL(location).hostname) ?
-      cookieRedirect(hostname === 'oauth.do' ? '/thanks' : location, token, jwt.payload.exp, req) :
+      cookieRedirect(hostname === 'oauth.do' ? '/thanks' : location, token, jwt.payload.exp, req, sendCookie) :
       await callback(env, context)
   const options = { clientId: env.GITHUB_CLIENT_ID, state }
   return Response.redirect(hostname === 'oauth.do' ?
@@ -79,12 +81,12 @@ async function loginRedirect(req, env) {
     `https://oauth.do/login?state=${state}`, 302)
 }
 
-function cookieRedirect(location, token, expires, req) {
+function cookieRedirect(location, token, expires, req, sendCookie = true) {
   return new Response(null, {
     status: 302,
     headers: {
       location,
-      "Set-Cookie": `${authCookie}=${token}; expires=${expires}; path=/; domain=.${new URL(req.url).hostname.replace(/.*\.([^.]+.[^.]+)$/, '$1')}`,
+      "Set-Cookie": sendCookie ? `${authCookie}=${token}; expires=${expires}; path=/; domain=.${new URL(req.url).hostname.replace(/.*\.([^.]+.[^.]+)$/, '$1')}` : undefined,
     }
   })
 }
@@ -105,8 +107,9 @@ async function callback(env, context) {
   const clientId = env.GITHUB_CLIENT_ID
   const clientSecret = env.GITHUB_CLIENT_SECRET
 
-  let [users, location] = await Promise.all([
+  let [users, redirect] = await Promise.all([
     !contextUser?.authenticated && github.users({ options: { clientSecret, clientId }, request: { url } }), env.REDIRECTS.get(query.state)])
+  const { location, sendCookie } = redirect
   const user = (users || await env.USERS.get(contextUser.profile.id).then(JSON.parse)).user
   const profile = {
     id: user.id,
@@ -132,14 +135,14 @@ async function callback(env, context) {
 
   await Promise.all([
     env.USERS.put(user.id.toString(), JSON.stringify({ profile, user }, null, 2)),
-    env.REDIRECTS.put(query.state + '2', JSON.stringify({ location, token, expires }), { expirationTtl: 60 }),
+    env.REDIRECTS.put(query.state + '2', JSON.stringify({ location, token, expires, sendCookie }), { expirationTtl: 60 }),
   ])
 
   return new Response(null, {
     status: 302,
     headers: {
       location: domain === 'oauth.do' ? '/thanks' : `https://${subdomain}/login/callback?state=${query.state}`,
-      "Set-Cookie": `${authCookie}=${token}; expires=${expires}; path=/; domain=.${domain}`
+      "Set-Cookie": sendCookie ? `${authCookie}=${token}; expires=${expires}; path=/; domain=.${domain}` : undefined
     }
   })
 }
@@ -149,8 +152,8 @@ async function callback(env, context) {
  * Bound service method to set the login cookie
  */
 router.get('/login/callback', async (req, env) => {
-  let { location, token, expires } = await env.REDIRECTS.get(new URL(req.url).searchParams.get('state') + '2').then(JSON.parse)
-  return cookieRedirect(location, token, expires, req)
+  let { location, token, expires, sendCookie } = await env.REDIRECTS.get(new URL(req.url).searchParams.get('state') + '2').then(JSON.parse)
+  return cookieRedirect(location, token, expires, req, sendCookie)
 })
 
 
