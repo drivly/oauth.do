@@ -74,7 +74,7 @@ async function loginRedirect(req, env) {
   if (token && (jwt = await verify(hostname, token, env)))
     return hostname === (location && new URL(location).hostname) ?
       cookieRedirect(hostname === 'oauth.do' ? '/thanks' : location, token, jwt.payload.exp, req, sendCookie) :
-      await callback(env, context)
+      await callback(req, env, context)
   const options = { clientId: env.GITHUB_CLIENT_ID, state }
   return Response.redirect(hostname === 'oauth.do' ?
     github.redirect({ options }) :
@@ -95,9 +95,9 @@ function cookieRedirect(location, token, expires, req, sendCookie = true) {
 /**
  * Callback to oauth.do from external oauth provider
  */
-router.get('/callback', async (req, env) => await callback(env, await env.CTX.fetch(req).then(res => res.json())))
+router.get('/callback', async (req, env) => await callback(req, env, await env.CTX.fetch(req).then(res => res.json())))
 
-async function callback(env, context) {
+async function callback(req, env, context) {
   let { query, url, user: contextUser } = context
   if (query.error) {
     return new Response(query.error, {
