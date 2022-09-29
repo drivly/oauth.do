@@ -102,7 +102,7 @@ function cookieRedirect(location, token, expires, req, sendCookie = true) {
 router.get('/callback', async (req, env) => await callback(req, env, await env.CTX.fetch(req).then(res => res.json())))
 
 async function callback(req, env, context) {
-  let { query, url, user: contextUser } = context
+  let { query, url, user: contextUser, hostname } = context
   if (query.error) {
     return new Response(query.error, {
       status: 401,
