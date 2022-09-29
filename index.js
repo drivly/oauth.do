@@ -22,7 +22,11 @@ const enrichRequest = req => {
 async function verify(hostname, token, env) {
   const domain = hostname.replace(/.*\.([^.]+.[^.]+)$/, '$1')
   const hash = await crypto.subtle.digest('SHA-512', new TextEncoder().encode(env.JWT_SECRET + domain))
-  return await jwtVerify(token, new Uint8Array(hash), { issuer: domain })
+  try {
+    return await jwtVerify(token, new Uint8Array(hash), { issuer: domain })
+  } catch (error) {
+    console.log({ error })
+  }
 }
 
 router.all('*', withCookies, enrichRequest)
