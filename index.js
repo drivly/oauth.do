@@ -6,7 +6,7 @@ import github from './github'
 
 const router = Router()
 const recentInteractions = {}
-const authCookie = '__Session-worker.auth.providers-token'
+const authCookie = '__Secure-worker.auth.providers-token'
 
 const enrichRequest = req => {
   req.id = req.headers.get('CF-Ray') + '-' + req.cf.colo
@@ -86,7 +86,7 @@ function cookieRedirect(location, token, expires, req, sendCookie = true) {
     status: 302,
     headers: {
       location,
-      "Set-Cookie": sendCookie ? `${authCookie}=${token}; expires=${expires}; path=/; domain=.${new URL(req.url).hostname.replace(/.*\.([^.]+.[^.]+)$/, '$1')}` : undefined,
+      "Set-Cookie": sendCookie ? `${authCookie}=${token}; expires=${new Date(expires)}; path=/; domain=.${new URL(req.url).hostname.replace(/.*\.([^.]+.[^.]+)$/, '$1')}; Secure; HttpOnly` : undefined,
     }
   })
 }
@@ -107,8 +107,7 @@ async function callback(env, context) {
   const clientId = env.GITHUB_CLIENT_ID
   const clientSecret = env.GITHUB_CLIENT_SECRET
 
-  let [users, redirect] = await Promise.all([
-    !contextUser?.authenticated && github.users({ options: { clientSecret, clientId }, request: { url } }), env.REDIRECTS.get(query.state).then(JSON.parse)])
+  let [users, redirect] = await Promise.all([!contextUser?.authenticated && github.users({ options: { clientSecret, clientId }, request: { url } }), env.REDIRECTS.get(query.state).then(JSON.parse)])
   const { location, sendCookie } = redirect
   const user = (users || await env.USERS.get(contextUser.profile.id).then(JSON.parse)).user
   const profile = {
@@ -137,14 +136,7 @@ async function callback(env, context) {
     env.USERS.put(user.id.toString(), JSON.stringify({ profile, user }, null, 2)),
     env.REDIRECTS.put(query.state + '2', JSON.stringify({ location, token, expires, sendCookie }), { expirationTtl: 60 }),
   ])
-
-  return new Response(null, {
-    status: 302,
-    headers: {
-      location: domain === 'oauth.do' ? '/thanks' : `https://${subdomain}/login/callback?state=${query.state}`,
-      "Set-Cookie": sendCookie ? `${authCookie}=${token}; expires=${expires}; path=/; domain=.${domain}` : undefined
-    }
-  })
+  return cookieRedirect(domain === 'oauth.do' ? '/thanks' : `https://${subdomain}/login/callback?state=${query.state}`, token, expires, req, sendCookie)
 }
 
 
