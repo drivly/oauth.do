@@ -28,7 +28,7 @@ sequenceDiagram
   C--)D: return user object
 ```
 
-- Domains using `oauth.do` have a `*/login*` route bound to the oauth-do worker
+- Domains using `oauth.do` have a `*/login*` route bound to the oauth-do worker.
 - `https://database.do/login` hits the `/login` route in oauth-do, and is redirected to the shared login service at `https://oauth.do/login` if not previously logged in.
 - If the user has not logged into oauth.do, they are redirected to the oauth provider:
 - `https://github.com/login/oauth/authorize?`
