@@ -113,12 +113,12 @@ async function callback(req, env, context) {
 
   let [users, redirect] = await Promise.all([!contextUser?.authenticated && github.users({ options: { clientSecret, clientId }, request: { url } }), env.REDIRECTS.get(query.state).then(JSON.parse)])
   const { location, sendCookie } = redirect
-  const profile = contextUser?.profile || {
-    id: users.user.id,
-    user: users.user.login,
-    name: users.user.name,
-    image: users.user.avatar_url,
-    email: users.user.email,
+  const profile = {
+    id: contextUser?.id || users.user.id,
+    user: contextUser?.user || users.user.login,
+    name: contextUser?.name || users.user.name,
+    image: contextUser?.image || users.user.avatar_url,
+    email: contextUser?.email || users.user.email,
   }
 
   const subdomain = location && new URL(location).hostname || hostname
