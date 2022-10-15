@@ -1,6 +1,7 @@
 import { Router } from 'itty-router'
 import { error, json, withCookies } from 'itty-router-extras'
 import github from './github'
+import qs from 'qs'
 
 const router = Router()
 const recentInteractions = {}
@@ -123,10 +124,7 @@ async function callback(req, env, context) {
   expires = expires.valueOf()
 
   const { token } = await env.JWT.fetch(new Request(
-    new URL(Object.entries(profile)
-      .reduce((profileQuery, profileProperty) => `${profileQuery}&profile[${profileProperty[0]}]=${profileProperty[1]}`,
-        `/generate?issuer=${domain}&expirationTTL=${expires}&secret=${env.JWT_SECRET + domain}`),
-      'https://' + domain)))
+    new URL('/generate?' + qs.stringify({ issuer: domain, expirationTTL: expires, secret: env.JWT_SECRET + domain, profile }), 'https://' + domain)))
     .then(res => res.json())
 
   await Promise.all([

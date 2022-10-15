@@ -39,6 +39,7 @@
     "itty-router-extras": "^0.4.2",
     "jose": "^4.8.3",
     "nanoid": "^4.0.0",
+    "qs": "^6.11.0",
     "worker-auth-providers": "^0.0.10"
   },
   "devDependencies": {
