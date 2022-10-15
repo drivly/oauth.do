@@ -1,7 +1,5 @@
 import { Router } from 'itty-router'
 import { error, json, withCookies } from 'itty-router-extras'
-import { jwtVerify, SignJWT } from 'jose'
-import { nanoid } from 'nanoid'
 import github from './github'
 
 const router = Router()
@@ -21,18 +19,15 @@ const enrichRequest = req => {
 
 async function verify(hostname, token, env) {
   const domain = hostname.replace(/.*\.([^.]+.[^.]+)$/, '$1')
-  const hash = await crypto.subtle.digest('SHA-512', new TextEncoder().encode(env.JWT_SECRET + domain))
-  try {
-    return await jwtVerify(token, new Uint8Array(hash), { issuer: domain })
-  } catch (error) {
-    console.log({ error })
-  }
+  const json = await env.JWT.fetch(new Request(new URL(`/verify?token=${token}&issuer=${domain}&secret=${env.JWT_SECRET + domain}`, 'https://' + domain))).then(res => res.json())
+  if (json.error) console.log({ error: json.error })
+  return json.jwt
 }
 
 router.all('*', withCookies, enrichRequest)
 
 
-router.get('/', (req, env) => json({ req }))
+router.get('/', (req) => json({ req }))
 
 
 router.get('/me', async (req, env) => {
@@ -127,13 +122,12 @@ async function callback(req, env, context) {
   expires.setFullYear(expires.getFullYear() + 1)
   expires = expires.valueOf()
 
-  const token = await new SignJWT({ profile })
-    .setProtectedHeader({ alg: 'HS256' })
-    .setJti(nanoid())
-    .setIssuedAt()
-    .setIssuer(domain)
-    .setExpirationTime(expires)
-    .sign(new Uint8Array(await crypto.subtle.digest('SHA-512', new TextEncoder().encode(env.JWT_SECRET + domain))))
+  const { token } = await env.JWT.fetch(new Request(
+    new URL(Object.entries(profile)
+      .reduce((profileQuery, profileProperty) => `${profileQuery}&${profileProperty[0]}=${profileProperty[1]}`,
+        `/generate?issuer=${domain}&expirationTTL=${expires}&secret=${env.JWT_SECRET + domain}`),
+      'https://' + domain)))
+    .then(res => res.json())
 
   await Promise.all([
     users && env.USERS.put(profile.id.toString(), JSON.stringify({ profile, user: users.user }, null, 2)),

@@ -6,7 +6,8 @@ compatibility_date = "2022-06-21"
 node_compat = true
 
 services = [
-  { binding = "CTX", service = "ctx-do", environment = "production" }
+  { binding = "CTX", service = "ctx-do", environment = "production" },
+  { binding = "JWT", service = "jwt-do", environment = "production" }
 ]
 
 kv_namespaces = [
