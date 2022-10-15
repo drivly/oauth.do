@@ -124,7 +124,7 @@ async function callback(req, env, context) {
 
   const { token } = await env.JWT.fetch(new Request(
     new URL(Object.entries(profile)
-      .reduce((profileQuery, profileProperty) => `${profileQuery}&${profileProperty[0]}=${profileProperty[1]}`,
+      .reduce((profileQuery, profileProperty) => `${profileQuery}&profile[${profileProperty[0]}]=${profileProperty[1]}`,
         `/generate?issuer=${domain}&expirationTTL=${expires}&secret=${env.JWT_SECRET + domain}`),
       'https://' + domain)))
     .then(res => res.json())
