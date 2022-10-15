@@ -113,14 +113,12 @@ async function callback(req, env, context) {
 
   let [users, redirect] = await Promise.all([!contextUser?.authenticated && github.users({ options: { clientSecret, clientId }, request: { url } }), env.REDIRECTS.get(query.state).then(JSON.parse)])
   const { location, sendCookie } = redirect
-  const kvUser = contextUser.profile?.id && await env.USERS.get(contextUser.profile.id).then(JSON.parse).catch(() => '')
-  const user = (kvUser || users).user
-  const profile = kvUser?.profile || {
-    id: user.id,
-    user: user.login,
-    name: user.name,
-    image: user.avatar_url,
-    email: user.email,
+  const profile = contextUser?.profile || {
+    id: users.user.id,
+    user: users.user.login,
+    name: users.user.name,
+    image: users.user.avatar_url,
+    email: users.user.email,
   }
 
   const subdomain = location && new URL(location).hostname || hostname
@@ -138,7 +136,7 @@ async function callback(req, env, context) {
     .sign(new Uint8Array(await crypto.subtle.digest('SHA-512', new TextEncoder().encode(env.JWT_SECRET + domain))))
 
   await Promise.all([
-    !kvUser && env.USERS.put(user.id.toString(), JSON.stringify({ profile, user }, null, 2)),
+    users && env.USERS.put(profile.id.toString(), JSON.stringify({ profile, user: users.user }, null, 2)),
     env.REDIRECTS.put(query.state + '2', JSON.stringify({ location, token, expires, sendCookie }), { expirationTtl: 60 }),
   ])
   return cookieRedirect(domain === 'oauth.do' ? '/thanks' : `https://${subdomain}/login/callback?state=${query.state}`, token, expires, req, sendCookie)
