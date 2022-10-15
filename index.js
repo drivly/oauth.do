@@ -111,7 +111,7 @@ async function callback(req, env, context) {
   const clientId = env.GITHUB_CLIENT_ID
   const clientSecret = env.GITHUB_CLIENT_SECRET
 
-  let [users, redirect] = await Promise.all([!user?.authenticated && github.users({ options: { clientSecret, clientId }, request: { url } }), env.REDIRECTS.get(query.state).then(JSON.parse)])
+  let [users, redirect] = await Promise.all([(!user?.authenticated || !user?.id) && github.users({ options: { clientSecret, clientId }, request: { url } }), env.REDIRECTS.get(query.state).then(JSON.parse)])
   const { location, sendCookie } = redirect
   const profile = {
     id: user?.id || users.user.id,
