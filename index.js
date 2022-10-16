@@ -22,7 +22,6 @@ async function verify(hostname, token, env) {
   if (!token) return token
   const domain = hostname.replace(/.*\.([^.]+.[^.]+)$/, '$1')
   const json = await env.JWT.fetch(new Request(new URL(`/verify?token=${token}&issuer=${domain}&secret=${env.JWT_SECRET + domain}`, 'https://' + domain))).then(res => res.json())
-  if (json.error) console.log({ error: json.error })
   return json.jwt
 }
 
@@ -121,7 +120,7 @@ async function callback(req, env, context) {
   const json = await env.JWT.fetch(new Request(
     new URL('/generate?' + qs.stringify({ issuer: domain, expirationTTL: expires, secret: env.JWT_SECRET + domain, profile }), 'https://' + domain)))
     .then(res => res.json())
-  if (json.error) throw error
+  if (json.error) throw json.error
 
   await Promise.all([
     users && env.USERS.put(profile.id.toString(), JSON.stringify({ profile, user: users.user }, null, 2)),
