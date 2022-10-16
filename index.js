@@ -43,7 +43,7 @@ router.get('/me', async (req, env) => {
 
 router.get('/me.jpg', async (req, env) => {
   const { hostname } = new URL(req.url)
-  const token = req.cookies[authCookie]
+  const token = req.cookies?.[authCookie]
   const jwt = await verify(hostname, token, env)
   return await fetch(jwt?.payload?.profile?.image || 'https://github.com/drivly/oauth.do/raw/main/GetStartedWithGithub.png')
 })
