@@ -58,10 +58,11 @@ async function loginRedirect(req, env) {
   const context = await env.CTX.fetch(req).then(res => res.json())
   const { hostname, headers, query } = context
   const redirect = query?.state && await env.REDIRECTS.get(query.state).then(JSON.parse)
+  const queryUri = query?.redirect_uri && decodeURI(query.redirect_uri)
   const sendCookie = redirect ? redirect.sendCookie :
-    query?.redirect_uri && new URL(query.redirect_uri).hostname === hostname ||
-    !query?.redirect_uri && headers?.referer && new URL(headers.referer).hostname === hostname
-  const location = redirect?.location || query?.redirect_uri || headers?.referer || `https://${hostname}/api`
+    queryUri && new URL(queryUri).hostname === hostname ||
+    !queryUri && headers?.referer && new URL(headers.referer).hostname === hostname
+  const location = redirect?.location || queryUri || headers?.referer || `https://${hostname}/api`
   const state = query?.state || crypto.randomUUID()
   if (!query?.state) await env.REDIRECTS.put(state, JSON.stringify({ location, sendCookie }), { expirationTtl: 600 })
   const token = req.cookies?.[authCookie]
