@@ -8,33 +8,33 @@ Visit <https://oauth.do/login> to login
 
 ```mermaid
 sequenceDiagram
-  participant D as database.do
   participant C as ctx-do
-  participant J as jwt-do
+  participant D as database.do
   participant O as database.do<br/>(oauth-do)
+  participant J as jwt-do
   participant A as oauth.do
   D->>O: /login
   alt databases.do logged in
     O->>J: /verify
-    J->>O: decrypt JWT
+    J->>O: decrypt database.do JWT
   else databases.do logged out
     O->>A: /login?state=
     alt oauth.do logged in
       A->>J: /verify
-      J->>A: decrypt JWT
+      J->>A: decrypt oauth.do JWT
     else oauth.do logged out
       A-)github.com: /login/oauth/authorize?
       github.com-->>A: /callback
     end
     A->>O: /login/callback
     O->>J: /generate
-    J->>O: JWT token
+    J->>O: database.do JWT token
   end
   O->>D: /api
   Note over O,D: set JWT cookie
   D->>C: /api
   C->>J: /verify
-  J->>C: decrypt JWT
+  J->>C: decrypt database.do JWT
   C--)D: return user object
 ```
 
