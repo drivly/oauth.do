@@ -34,7 +34,7 @@ router.get('/', (req) => json({ req }))
 
 router.get('/me', async (req, env) => {
   const { hostname } = new URL(req.url)
-  const token = req.cookies[authCookie]
+  const token = req.cookies?.[authCookie]
   const jwt = await verify(hostname, token, env)
   if (jwt) return json({ req, token, jwt })
   return await loginRedirect(new Request(new URL('/me?redirect_uri=' + req.url, req.url)), env)
