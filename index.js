@@ -37,7 +37,7 @@ router.get('/me', async (req, env) => {
   const token = req.cookies[authCookie]
   const jwt = await verify(hostname, token, env)
   if (jwt) return json({ req, token, jwt })
-  return await loginRedirect(req, env)
+  return await loginRedirect(new Request(new URL('/me?redirect_uri=' + req.url, req.url)), env)
 })
 
 
@@ -68,7 +68,7 @@ async function loginRedirect(req, env) {
   let jwt
   if (token && (jwt = await verify(hostname, token, env)))
     return hostname === (location && new URL(location).hostname) ?
-      cookieRedirect(hostname === 'oauth.do' ? '/thanks' : location, token, jwt.payload.exp, req, sendCookie) :
+      cookieRedirect(!location && hostname === 'oauth.do' ? '/thanks' : location, token, jwt.payload.exp, req, sendCookie) :
       await callback(req, env, context)
   const options = { clientId: env.GITHUB_CLIENT_ID, state }
   return Response.redirect(hostname === 'oauth.do' ?
