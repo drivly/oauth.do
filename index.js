@@ -64,7 +64,7 @@ async function loginRedirect(req, env) {
   const location = redirect?.location || query?.redirect_uri || headers?.referer || `https://${hostname}/api`
   const state = query?.state || crypto.randomUUID()
   if (!query?.state) await env.REDIRECTS.put(state, JSON.stringify({ location, sendCookie }), { expirationTtl: 600 })
-  const token = req.cookies[authCookie]
+  const token = req.cookies?.[authCookie]
   let jwt
   if (token && (jwt = await verify(hostname, token, env)))
     return hostname === (location && new URL(location).hostname) ?
