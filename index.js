@@ -37,7 +37,7 @@ router.get('/me', async (req, env) => {
   const token = req.cookies?.[authCookie]
   const jwt = await verify(hostname, token, env)
   if (jwt) return json({ req, token, jwt })
-  return await loginRedirect(new Request(new URL('/me?redirect_uri=' + req.url, req.url)), env)
+  return await loginRedirect(req, env)
 })
 
 
@@ -58,10 +58,9 @@ async function loginRedirect(req, env) {
   const context = await env.CTX.fetch(req).then(res => res.json())
   const { hostname, headers, query } = context
   const redirect = query?.state && await env.REDIRECTS.get(query.state).then(JSON.parse)
-  const queryUri = query?.redirect_uri && decodeURI(query.redirect_uri)
   const sendCookie = redirect ? redirect.sendCookie :
-    queryUri && new URL(queryUri).hostname === hostname ||
-    !queryUri && headers?.referer && new URL(headers.referer).hostname === hostname
+    query?.redirect_uri && new URL(query.redirect_uri).hostname === hostname ||
+    !query?.redirect_uri && headers?.referer && new URL(headers.referer).hostname === hostname
   const location = redirect?.location || queryUri || headers?.referer || `https://${hostname}/api`
   const state = query?.state || crypto.randomUUID()
   if (!query?.state) await env.REDIRECTS.put(state, JSON.stringify({ location, sendCookie }), { expirationTtl: 600 })
