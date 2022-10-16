@@ -19,6 +19,7 @@ const enrichRequest = req => {
 }
 
 async function verify(hostname, token, env) {
+  if (!token) return token
   const domain = hostname.replace(/.*\.([^.]+.[^.]+)$/, '$1')
   const json = await env.JWT.fetch(new Request(new URL(`/verify?token=${token}&issuer=${domain}&secret=${env.JWT_SECRET + domain}`, 'https://' + domain))).then(res => res.json())
   if (json.error) console.log({ error: json.error })
@@ -34,23 +35,17 @@ router.get('/', (req) => json({ req }))
 router.get('/me', async (req, env) => {
   const { hostname } = new URL(req.url)
   const token = req.cookies[authCookie]
-  try {
-    return json({ req, token, jwt: await verify(hostname, token, env) })
-  } catch {
-    return await loginRedirect(req, env)
-  }
+  const jwt = await verify(hostname, token, env)
+  if (jwt) return json({ req, token, jwt })
+  return await loginRedirect(req, env)
 })
 
 
 router.get('/me.jpg', async (req, env) => {
   const { hostname } = new URL(req.url)
   const token = req.cookies[authCookie]
-  try {
-    const jwt = await verify(hostname, token, env)
-    return await fetch(jwt?.payload?.profile?.image || 'https://github.com/drivly/oauth.do/raw/main/GetStartedWithGithub.png')
-  } catch {
-    return await fetch('https://github.com/drivly/oauth.do/raw/main/GetStartedWithGithub.png')
-  }
+  const jwt = await verify(hostname, token, env)
+  return await fetch(jwt?.payload?.profile?.image || 'https://github.com/drivly/oauth.do/raw/main/GetStartedWithGithub.png')
 })
 
 
