@@ -61,7 +61,11 @@ async function loginRedirect(req, env) {
   const sendCookie = redirect ? redirect.sendCookie :
     query?.redirect_uri && new URL(decodeURIComponent(query.redirect_uri)).hostname === hostname ||
     !query?.redirect_uri && headers?.referer && new URL(headers.referer).hostname === hostname
-  const location = redirect?.location || query?.redirect_uri && decodeURIComponent(query.redirect_uri) || headers?.referer || hostname === 'oauth.do' && 'https://oauth.do/thanks' || `https://${hostname}/api`
+  const location = redirect?.location ||
+    query?.redirect_uri && decodeURIComponent(query.redirect_uri) ||
+    headers?.referer !== 'https://oauth.do/' && headers?.referer ||
+    hostname === 'oauth.do' && 'https://oauth.do/thanks' ||
+    `https://${hostname}/api`
   const state = query?.state || crypto.randomUUID()
   if (!query?.state) await env.REDIRECTS.put(state, JSON.stringify({ location, sendCookie }), { expirationTtl: 600 })
   const token = req.cookies?.[authCookie]
