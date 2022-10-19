@@ -61,14 +61,14 @@ async function loginRedirect(req, env) {
   const sendCookie = redirect ? redirect.sendCookie :
     query?.redirect_uri && new URL(decodeURIComponent(query.redirect_uri)).hostname === hostname ||
     !query?.redirect_uri && headers?.referer && new URL(headers.referer).hostname === hostname
-  const location = redirect?.location || query?.redirect_uri && decodeURIComponent(query.redirect_uri) || headers?.referer || `https://${hostname}/api`
+  const location = redirect?.location || query?.redirect_uri && decodeURIComponent(query.redirect_uri) || headers?.referer || hostname === 'oauth.do' && '/thanks' || `https://${hostname}/api`
   const state = query?.state || crypto.randomUUID()
   if (!query?.state) await env.REDIRECTS.put(state, JSON.stringify({ location, sendCookie }), { expirationTtl: 600 })
   const token = req.cookies?.[authCookie]
   let jwt
   if (token && (jwt = await verify(hostname, token, env)))
     return hostname === (location && new URL(location).hostname) ?
-      cookieRedirect(!location && hostname === 'oauth.do' ? '/thanks' : location, token, jwt.payload.exp, req, sendCookie) :
+      cookieRedirect(location, token, jwt.payload.exp, req, sendCookie) :
       await callback(req, env, context)
   const options = { clientId: env.GITHUB_CLIENT_ID, state }
   return Response.redirect(hostname === 'oauth.do' ?
@@ -127,7 +127,7 @@ async function callback(req, env, context) {
     users && env.USERS.put(profile.id.toString(), JSON.stringify({ profile, user: users.user }, null, 2)),
     env.REDIRECTS.put(query.state + '2', JSON.stringify({ location, token: json.token, expires, sendCookie }), { expirationTtl: 60 }),
   ])
-  return cookieRedirect(domain === 'oauth.do' ? location || '/thanks' : `https://${subdomain}/login/callback?state=${query.state}`, json.token, expires, req, sendCookie)
+  return cookieRedirect(domain === 'oauth.do' ? location : `https://${subdomain}/login/callback?state=${query.state}`, json.token, expires, req, sendCookie)
 }
 
 
