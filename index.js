@@ -112,15 +112,17 @@ function cookieRedirect(location, token, expires, req, sendCookie = true) {
  * Callback to oauth.do from external oauth provider
  */
 router.get('/callback', async (req, env) => await callback(req, env, await env.CTX.fetch(req).then(res => res.json())))
+router.get('/callback/:provider', async (req, env) => await callback(req, env, await env.CTX.fetch(req).then(res => res.json())))
 
 async function callback(req, env, context) {
-  let { query, url, user, hostname } = context
+  let { hostname, pathSegments, query, url, user, } = context
   if (query.error) {
     return new Response(query.error, {
       status: 401,
     })
   }
 
+  let provider = pathSegments[pathSegments.length - 1]
   const options = {}
   let providerInstance = null
   switch (provider) {
