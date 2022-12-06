@@ -1,4 +1,4 @@
-export { default as users } from './users';
-export { default as redirect } from './redirect';
+import { default as users } from './users';
+import { default as redirect } from './redirect';
 
 export default { users, redirect }
