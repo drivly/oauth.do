@@ -1,7 +1,7 @@
 import * as queryString from 'query-string';
 import { ConfigError } from '../../utils/errors';
 
-export default async function redirect({ options }) {
+export default function redirect({ options }) {
 	const {
 		clientId,
 		redirectUrl,
