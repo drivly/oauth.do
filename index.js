@@ -84,6 +84,7 @@ async function loginRedirect(req, env) {
   switch (provider) {
     case 'google':
       options.clientId = env.GOOGLE_CLIENT_ID
+      options.redirectUrl = 'https://oauth.do/callback/google'
       providerInstance = google
       break;
     case 'github':
