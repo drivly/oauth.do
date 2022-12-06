@@ -1,6 +1,7 @@
 import { Router } from 'itty-router'
 import { error, json, withCookies } from 'itty-router-extras'
-import github from './github'
+import github from './providers/github'
+import google from './providers/google'
 import qs from 'qs'
 
 const router = Router()
@@ -54,9 +55,12 @@ router.get('/me.jpg', async (req, env) => {
  */
 router.get('/login', loginRedirect)
 
+
+router.get('/login/:provider', loginRedirect)
+
 async function loginRedirect(req, env) {
   const context = await env.CTX.fetch(req).then(res => res.json())
-  const { hostname, headers, query } = context
+  const { hostname, headers, pathSegments, query, } = context
   const redirect = query?.state && await env.REDIRECTS.get(query.state).then(JSON.parse)
   const sendCookie = redirect ? redirect.sendCookie :
     query?.redirect_uri && new URL(decodeURIComponent(query.redirect_uri)).hostname === hostname ||
@@ -74,10 +78,23 @@ async function loginRedirect(req, env) {
     return hostname === (location && new URL(location).hostname) ?
       cookieRedirect(location, token, jwt.payload.exp, req, sendCookie) :
       await callback(req, env, context)
-  const options = { clientId: env.GITHUB_CLIENT_ID, state }
+  let provider = pathSegments[pathSegments.length - 1]
+  const options = { state }
+  let providerInstance = null
+  switch (provider) {
+    case 'google':
+      options.clientId = env.GOOGLE_CLIENT_ID
+      providerInstance = google
+      break;
+    case 'github':
+    default:
+      options.clientId = env.GITHUB_CLIENT_ID
+      providerInstance = github
+      break;
+  }
   return Response.redirect(hostname === 'oauth.do' ?
-    github.redirect({ options }) :
-    `https://oauth.do/login?state=${state}`, 302)
+    providerInstance.redirect({ options }) :
+    `https://oauth.do/login/${provider}?state=${state}`, 302)
 }
 
 function cookieRedirect(location, token, expires, req, sendCookie = true) {
@@ -103,10 +120,24 @@ async function callback(req, env, context) {
       status: 401,
     })
   }
-  const clientId = env.GITHUB_CLIENT_ID
-  const clientSecret = env.GITHUB_CLIENT_SECRET
 
-  let [users, redirect] = await Promise.all([!user?.id && github.users({ options: { clientSecret, clientId }, request: { url } }), env.REDIRECTS.get(query.state).then(JSON.parse)])
+  const options = {}
+  let providerInstance = null
+  switch (provider) {
+    case 'google':
+      options.clientId = env.GOOGLE_CLIENT_ID
+      options.clientSecret = env.GOOGLE_CLIENT_SECRET
+      providerInstance = google
+      break;
+    case 'github':
+    default:
+      options.clientId = env.GITHUB_CLIENT_ID
+      options.clientSecret = env.GITHUB_CLIENT_SECRET
+      providerInstance = github
+      break;
+  }
+
+  let [users, redirect] = await Promise.all([!user?.id && providerInstance.users({ options, request: { url } }), env.REDIRECTS.get(query.state).then(JSON.parse)])
   const { location, sendCookie } = redirect
   const profile = {
     id: user?.id || users?.user?.id,
