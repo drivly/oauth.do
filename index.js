@@ -100,6 +100,8 @@ function cookieRedirect(location, token, expires, req, sendCookie = true) {
 /**
  * Callback to oauth.do from external oauth provider
  */
+router.get('/login/callback', async (req, env) => await callback(req, env, await env.CTX.fetch(req).then(res => res.json())))
+router.get('/login/callback/:provider', async (req, env) => await callback(req, env, await env.CTX.fetch(req).then(res => res.json())))
 router.get('/callback', async (req, env) => await callback(req, env, await env.CTX.fetch(req).then(res => res.json())))
 router.get('/callback/:provider', async (req, env) => await callback(req, env, await env.CTX.fetch(req).then(res => res.json())))
 
