@@ -65,7 +65,9 @@ async function getUser(token) {
   }
 }
 
-export default async function callback({ options, request }) {
+export default async function callback({ env, options, request }) {
+  options.clientId = env.GITHUB_CLIENT_ID
+  options.clientSecret = env.GITHUB_CLIENT_SECRET
   const { query } = parseQuerystring(request);
   console.log('[code]', query.code);
   if (!query.code) {

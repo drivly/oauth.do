@@ -53,18 +53,21 @@ async function getUser(token) {
 }
 
 export default async function callback({ options, request }) {
-    const { query } = parseQuerystring(request);
-    console.log('[query]', query);
-    if (!query.code) {
-      throw new ConfigError({
-        message: 'No code is passed!',
-      });
-    }
-    const tokens = await getTokensFromCode(query.code, options);
-    const accessToken = tokens.access_token;
-    const providerUser = await getUser(accessToken);
-    return {
-      user: providerUser,
-      tokens
-    };
+  options.clientId = env.GOOGLE_CLIENT_ID
+  options.clientSecret = env.GOOGLE_CLIENT_SECRET
+  options.redirectUrl = 'https://oauth.do/callback/google'
+  const { query } = parseQuerystring(request);
+  console.log('[query]', query);
+  if (!query.code) {
+    throw new ConfigError({
+      message: 'No code is passed!',
+    });
+  }
+  const tokens = await getTokensFromCode(query.code, options);
+  const accessToken = tokens.access_token;
+  const providerUser = await getUser(accessToken);
+  return {
+    user: providerUser,
+    tokens
+  };
 }

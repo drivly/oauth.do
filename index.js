@@ -78,21 +78,9 @@ async function loginRedirect(req, env) {
     return hostname === (location && new URL(location).hostname) ?
       cookieRedirect(location, token, jwt.payload.exp, req, sendCookie) :
       await callback(req, env, context)
-  let provider = pathSegments[pathSegments.length - 1]
   const options = { state }
-  let providerInstance = null
-  switch (provider) {
-    case 'google':
-      options.clientId = env.GOOGLE_CLIENT_ID
-      options.redirectUrl = 'https://oauth.do/callback/google'
-      providerInstance = google
-      break;
-    case 'github':
-    default:
-      options.clientId = env.GITHUB_CLIENT_ID
-      providerInstance = github
-      break;
-  }
+  const provider = pathSegments[pathSegments.length - 1]
+  const providerInstance = getProvider(provider)
   return Response.redirect(hostname === 'oauth.do' ?
     providerInstance.redirect({ options }) :
     `https://oauth.do/login/${provider}?state=${state}`, 302)
@@ -123,24 +111,9 @@ async function callback(req, env, context) {
     })
   }
 
-  let provider = pathSegments[pathSegments.length - 1]
-  const options = {}
-  let providerInstance = null
-  switch (provider) {
-    case 'google':
-      options.clientId = env.GOOGLE_CLIENT_ID
-      options.clientSecret = env.GOOGLE_CLIENT_SECRET
-      providerInstance = google
-      break;
-    case 'github':
-    default:
-      options.clientId = env.GITHUB_CLIENT_ID
-      options.clientSecret = env.GITHUB_CLIENT_SECRET
-      providerInstance = github
-      break;
-  }
-
-  let [users, redirect] = await Promise.all([!user?.id && providerInstance.users({ options, request: { url } }), env.REDIRECTS.get(query.state).then(JSON.parse)])
+  const provider = pathSegments[pathSegments.length - 1]
+  const providerInstance = getProvider(provider)
+  const [users, redirect] = await Promise.all([!user?.id && providerInstance.users({ env, options: {}, request: { url } }), env.REDIRECTS.get(query.state).then(JSON.parse)])
   const { location, sendCookie } = redirect
   const profile = {
     id: user?.id || users?.user?.id,
@@ -185,6 +158,20 @@ router.get('/logout', (req, env) => cookieRedirect('/', '', 499162920, req))
 
 
 router.get('*', req => fetch(req))
+
+function getProvider(provider) {
+  let providerInstance = null
+  switch (provider) {
+    case 'google':
+      providerInstance = google
+      break
+    case 'github':
+    default:
+      providerInstance = github
+      break
+  }
+  return providerInstance
+}
 
 export default {
   fetch: router.handle
