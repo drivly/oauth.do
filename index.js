@@ -138,7 +138,7 @@ async function callback(req, env, context) {
     users && env.USERS.put(profile.id.toString(), JSON.stringify({ profile, user: users.user }, null, 2)),
     env.REDIRECTS.put(query.state + '2', JSON.stringify({ location, token: json.token, expires, sendCookie }), { expirationTtl: 60 }),
   ])
-  return cookieRedirect(domain === 'oauth.do' ? location : `https://${subdomain}/login/callback?state=${query.state}`, json.token, expires, req, sendCookie)
+  return cookieRedirect(domain === 'oauth.do' ? location : `https://${subdomain}/login/${provider}/callback?state=${query.state}`, json.token, expires, req, sendCookie)
 }
 
 
