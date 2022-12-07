@@ -82,7 +82,7 @@ async function loginRedirect(req, env) {
   const provider = pathSegments[pathSegments.length - 1]
   const providerInstance = getProvider(provider)
   return Response.redirect(hostname === 'oauth.do' ?
-    providerInstance.redirect({ options }) :
+    providerInstance.redirect({ env, options }) :
     `https://oauth.do/login/${provider}?state=${state}`, 302)
 }
 

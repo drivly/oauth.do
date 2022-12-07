@@ -1,7 +1,7 @@
 import * as queryString from "query-string";
 import { ConfigError } from "../../utils/errors";
 
-export default function redirect({ options }) {
+export default function redirect({ env, options }) {
   options.clientId = env.GITHUB_CLIENT_ID
   const { clientId, state } = options;
   if (!clientId) {

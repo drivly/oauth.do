@@ -52,7 +52,7 @@ async function getUser(token) {
   }
 }
 
-export default async function callback({ options, request }) {
+export default async function callback({ env, options, request }) {
   options.clientId = env.GOOGLE_CLIENT_ID
   options.clientSecret = env.GOOGLE_CLIENT_SECRET
   options.redirectUrl = 'https://oauth.do/callback/google'
