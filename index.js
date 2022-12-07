@@ -29,9 +29,7 @@ async function verify(hostname, token, env) {
 
 router.all('*', withCookies, enrichRequest)
 
-
 router.get('/', (req) => json({ req }))
-
 
 router.get('/me', async (req, env) => {
   const { hostname } = new URL(req.url)
@@ -41,7 +39,6 @@ router.get('/me', async (req, env) => {
   return await loginRedirect(new Request(req.url, { headers: { referer: req.url }, cf: req.cf }), env)
 })
 
-
 router.get('/me.jpg', async (req, env) => {
   const { hostname } = new URL(req.url)
   const token = req.cookies?.[authCookie]
@@ -49,12 +46,18 @@ router.get('/me.jpg', async (req, env) => {
   return await fetch(jwt?.payload?.profile?.image || 'https://github.com/drivly/oauth.do/raw/main/GetStartedWithGithub.png')
 })
 
-
 /**
  * Bound login service (also bound on oauth.do)
  */
 router.get('/login', loginRedirect)
 
+/**
+ * Bound service method to set the login cookie
+ */
+router.get('/login/callback', async (req, env) => {
+  let { location, token, expires, sendCookie } = await env.REDIRECTS.get(new URL(req.url).searchParams.get('state') + '2').then(JSON.parse)
+  return cookieRedirect(location, token, expires, req, sendCookie)
+})
 
 router.get('/login/:provider', loginRedirect)
 
@@ -78,15 +81,18 @@ async function loginRedirect(req, env) {
     return hostname === (location && new URL(location).hostname) ?
       cookieRedirect(location, token, jwt.payload.exp, req, sendCookie) :
       await callback(req, env, context)
-  const options = { state }
   const provider = pathSegments[pathSegments.length - 1]
   const providerInstance = getProvider(provider)
-  return Response.redirect(hostname === 'oauth.do' ?
+  const options = { state }
+  const loginUri = hostname === 'oauth.do' ?
     providerInstance.redirect({ env, options }) :
-    `https://oauth.do/login/${provider}?state=${state}`, 302)
+    `https://oauth.do/login/${provider}?state=${state}`
+  console.log({ loginUri })
+  return Response.redirect(loginUri, 302)
 }
 
 function cookieRedirect(location, token, expires, req, sendCookie = true) {
+  console.log({ location })
   return new Response(null, {
     status: 302,
     headers: {
@@ -95,7 +101,6 @@ function cookieRedirect(location, token, expires, req, sendCookie = true) {
     }
   })
 }
-
 
 /**
  * Callback to oauth.do from external oauth provider
@@ -143,19 +148,9 @@ async function callback(req, env, context) {
 
 
 /**
- * Bound service method to set the login cookie
- */
-router.get('/login/callback', async (req, env) => {
-  let { location, token, expires, sendCookie } = await env.REDIRECTS.get(new URL(req.url).searchParams.get('state') + '2').then(JSON.parse)
-  return cookieRedirect(location, token, expires, req, sendCookie)
-})
-
-
-/**
  * Bound service method to clear the login cookie
  */
 router.get('/logout', (req, env) => cookieRedirect('/', '', 499162920, req))
-
 
 router.get('*', req => fetch(req))
 
