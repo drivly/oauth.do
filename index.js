@@ -100,8 +100,6 @@ function cookieRedirect(location, token, expires, req, sendCookie = true) {
 /**
  * Callback to oauth.do from external oauth provider
  */
-router.get('/login/callback', async (req, env) => await callback(req, env, await env.CTX.fetch(req).then(res => res.json())))
-router.get('/login/callback/:provider', async (req, env) => await callback(req, env, await env.CTX.fetch(req).then(res => res.json())))
 router.get('/callback', async (req, env) => await callback(req, env, await env.CTX.fetch(req).then(res => res.json())))
 router.get('/callback/:provider', async (req, env) => await callback(req, env, await env.CTX.fetch(req).then(res => res.json())))
 
@@ -140,7 +138,7 @@ async function callback(req, env, context) {
     users && env.USERS.put(profile.id.toString(), JSON.stringify({ profile, user: users.user }, null, 2)),
     env.REDIRECTS.put(query.state + '2', JSON.stringify({ location, token: json.token, expires, sendCookie }), { expirationTtl: 60 }),
   ])
-  return cookieRedirect(domain === 'oauth.do' ? location : `https://${subdomain}/login/${provider}/callback?state=${query.state}`, json.token, expires, req, sendCookie)
+  return cookieRedirect(domain === 'oauth.do' ? location : `https://${subdomain}/login/callback?state=${query.state}`, json.token, expires, req, sendCookie)
 }
 
 
