@@ -68,7 +68,7 @@ async function providerCallback(req, env, context) {
   expires.setFullYear(expires.getFullYear() + 1)
   expires = expires.valueOf()
   const json = await env.JWT.fetch(new Request(
-    new URL('/generate?' + qs.stringify({ issuer, expirationTTL: expires, secret: env.JWT_SECRET + 'oauth.do', profile }), 'https://oauth.do')))
+    new URL('/generate?' + qs.stringify({ issuer: 'oauth.do', expirationTTL: expires, secret: env.JWT_SECRET + 'oauth.do', profile }), 'https://oauth.do')))
     .then(res => res.json())
   if (json.error) throw json.error
 
