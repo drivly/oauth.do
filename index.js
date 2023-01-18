@@ -63,12 +63,10 @@ router.get('/login/callback', async (req, env) => {
   expires = expires.valueOf()
   const issuer = url.hostname.replace(/.*\.([^.]+.[^.]+)$/, '$1')
   const json = await env.JWT.fetch(new Request(
-    new URL('/generate?' + qs.stringify({ issuer, expirationTTL: expires, secret: env.JWT_SECRET + issuer, profile: jwt.payload.profile }), 'https://' + domain)))
+    new URL('/generate?' + qs.stringify({ issuer, expirationTTL: expires, secret: env.JWT_SECRET + issuer, profile: jwt.payload.profile }), 'https://' + issuer)))
     .then(res => res.json())
   if (json.error) throw json.error
-
   return cookieRedirect(location, json.token, expires, req, sendCookie)
-
 })
 
 router.get('/login/:provider', loginRedirect)
