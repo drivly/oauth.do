@@ -20,16 +20,7 @@ const enrichRequest = req => {
   }
 }
 
-async function verify(hostname, token, env) {
-  if (!token) return token
-  const json = await env.JWT.fetch(new Request(new URL(`/verify?token=${token}`, 'https://' + hostname.replace(domainPattern, '$1')), {
-    headers: { 'cookie': `${authCookie}=${token}` }
-  })).then(res => res.json())
-  return json.jwt
-}
-
 router.all('*', withCookies, enrichRequest)
-
 router.get('/', (req) => json({ req }))
 
 router.get('/me', async (req, env) => {
@@ -48,9 +39,46 @@ router.get('/me.jpg', async (req, env) => {
 })
 
 /**
- * Bound login service (also bound on oauth.do)
+ * Callback to oauth.do from external oauth provider
  */
-router.get('/login', loginRedirect)
+router.get('/callback', async (req, env) => await providerCallback(req, env, await env.CTX.fetch(req).then(res => res.json())))
+router.get('/callback/:provider', async (req, env) => await providerCallback(req, env, await env.CTX.fetch(req).then(res => res.json())))
+
+async function providerCallback(req, env, context) {
+  let { hostname, pathSegments, query, url, user, } = context
+  if (query.error) {
+    return new Response(query.error, {
+      status: 401,
+    })
+  }
+
+  const provider = pathSegments[pathSegments.length - 1]
+  const providerInstance = getProvider(provider)
+  const [users, redirect] = await Promise.all([!user?.id && providerInstance.users({ env, options: {}, request: { url } }), env.REDIRECTS.get(query.state).then(JSON.parse)])
+  const { location, sendCookie } = redirect
+  const profile = {
+    id: user?.id || users?.user?.id,
+    user: user?.user || users?.user?.login,
+    name: user?.name || users?.user?.name,
+    image: user?.image || users?.user?.avatar_url,
+    email: user?.email || users?.user?.email,
+  }
+
+  let expires = new Date()
+  expires.setFullYear(expires.getFullYear() + 1)
+  expires = expires.valueOf()
+  const json = await env.JWT.fetch(new Request(
+    new URL('/generate?' + qs.stringify({ issuer, expirationTTL: expires, secret: env.JWT_SECRET + 'oauth.do', profile }), 'https://oauth.do')))
+    .then(res => res.json())
+  if (json.error) throw json.error
+
+  await Promise.all([
+    users && env.USERS.put(profile.id.toString(), JSON.stringify({ profile, user: users.user }, null, 2)),
+    env.REDIRECTS.put(query.state + '2', JSON.stringify({ location, token: json.token, sendCookie }), { expirationTtl: 60 }),
+  ])
+  const subdomain = location && new URL(location).hostname || hostname
+  return cookieRedirect(subdomain.replace(domainPattern, '$1') === 'oauth.do' ? location : `https://${subdomain}/login/callback?state=${query.state}`, json.token, expires, req, sendCookie)
+}
 
 /**
  * Bound service method to set the login cookie
@@ -70,6 +98,10 @@ router.get('/login/callback', async (req, env) => {
   return cookieRedirect(location, json.token, expires, req, sendCookie)
 })
 
+/**
+ * Bound login service (also bound on oauth.do)
+ */
+router.get('/login', loginRedirect)
 router.get('/login/:provider', loginRedirect)
 
 async function loginRedirect(req, env) {
@@ -91,7 +123,7 @@ async function loginRedirect(req, env) {
   if (token && (jwt = await verify(hostname, token, env)))
     return hostname === (location && new URL(location).hostname) ?
       cookieRedirect(location, token, jwt.payload.exp, req, sendCookie) :
-      await callback(req, env, context)
+      await providerCallback(req, env, context)
   const provider = pathSegments[pathSegments.length - 1]
   const providerInstance = getProvider(provider)
   const options = { state }
@@ -114,56 +146,18 @@ function cookieRedirect(location, token, expires, req, sendCookie = true) {
 }
 
 /**
- * Callback to oauth.do from external oauth provider
- */
-router.get('/callback', async (req, env) => await callback(req, env, await env.CTX.fetch(req).then(res => res.json())))
-router.get('/callback/:provider', async (req, env) => await callback(req, env, await env.CTX.fetch(req).then(res => res.json())))
-
-async function callback(req, env, context) {
-  let { hostname, pathSegments, query, url, user, } = context
-  if (query.error) {
-    return new Response(query.error, {
-      status: 401,
-    })
-  }
-
-  const provider = pathSegments[pathSegments.length - 1]
-  const providerInstance = getProvider(provider)
-  const [users, redirect] = await Promise.all([!user?.id && providerInstance.users({ env, options: {}, request: { url } }), env.REDIRECTS.get(query.state).then(JSON.parse)])
-  const { location, sendCookie } = redirect
-  const profile = {
-    id: user?.id || users?.user?.id,
-    user: user?.user || users?.user?.login,
-    name: user?.name || users?.user?.name,
-    image: user?.image || users?.user?.avatar_url,
-    email: user?.email || users?.user?.email,
-  }
-
-  const subdomain = location && new URL(location).hostname || hostname
-  const domain = subdomain.replace(domainPattern, '$1')
-  let expires = new Date()
-  expires.setFullYear(expires.getFullYear() + 1)
-  expires = expires.valueOf()
-  const issuer = hostname.replace(domainPattern, '$1') === 'oauth.do' ? 'oauth.do' : domain
-  const json = await env.JWT.fetch(new Request(
-    new URL('/generate?' + qs.stringify({ issuer, expirationTTL: expires, secret: env.JWT_SECRET + issuer, profile }), 'https://' + domain)))
-    .then(res => res.json())
-  if (json.error) throw json.error
-
-  await Promise.all([
-    users && env.USERS.put(profile.id.toString(), JSON.stringify({ profile, user: users.user }, null, 2)),
-    env.REDIRECTS.put(query.state + '2', JSON.stringify({ location, token: json.token, sendCookie }), { expirationTtl: 60 }),
-  ])
-  return cookieRedirect(domain === 'oauth.do' ? location : `https://${subdomain}/login/callback?state=${query.state}`, json.token, expires, req, sendCookie)
-}
-
-
-/**
  * Bound service method to clear the login cookie
  */
 router.get('/logout', (req, env) => cookieRedirect('/', '', 499162920, req))
-
 router.get('*', req => fetch(req))
+
+async function verify(hostname, token, env) {
+  if (!token) return token
+  const json = await env.JWT.fetch(new Request(new URL(`/verify?token=${token}`, 'https://' + hostname.replace(domainPattern, '$1')), {
+    headers: { 'cookie': `${authCookie}=${token}` }
+  })).then(res => res.json())
+  return json.jwt
+}
 
 function getProvider(provider) {
   let providerInstance = null
@@ -182,4 +176,3 @@ function getProvider(provider) {
 export default {
   fetch: router.handle
 }
-
