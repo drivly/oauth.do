@@ -7,6 +7,7 @@ import qs from 'qs'
 const router = Router()
 const recentInteractions = {}
 const authCookie = '__Secure-worker.auth.providers-token'
+const domainPattern = /.*?\.([^.]+\.[^.]+)$/
 
 const enrichRequest = req => {
   req.id = req.headers.get('CF-Ray') + '-' + req.cf.colo
@@ -61,7 +62,7 @@ router.get('/login/callback', async (req, env) => {
   let expires = new Date()
   expires.setFullYear(expires.getFullYear() + 1)
   expires = expires.valueOf()
-  const issuer = url.hostname.replace(/.*?([^.]+\.[^.]+)$/, '$1')
+  const issuer = url.hostname.replace(domainPattern, '$1')
   const json = await env.JWT.fetch(new Request(
     new URL('/generate?' + qs.stringify({ issuer, expirationTTL: expires, secret: env.JWT_SECRET + issuer, profile: jwt.payload.profile }), 'https://' + issuer)))
     .then(res => res.json())
@@ -107,7 +108,7 @@ function cookieRedirect(location, token, expires, req, sendCookie = true) {
     status: 302,
     headers: {
       location,
-      "Set-Cookie": sendCookie ? `${authCookie}=${token}; expires=${new Date(expires)}; path=/; domain=.${new URL(req.url).hostname.replace(/.*\.([^.]+.[^.]+)$/, '$1')}; Secure; HttpOnly` : undefined,
+      "Set-Cookie": sendCookie ? `${authCookie}=${token}; expires=${new Date(expires)}; path=/; domain=.${new URL(req.url).hostname.replace(domainPattern, '$1')}; Secure; HttpOnly` : undefined,
     }
   })
 }
@@ -139,11 +140,11 @@ async function callback(req, env, context) {
   }
 
   const subdomain = location && new URL(location).hostname || hostname
-  const domain = subdomain.replace(/.*?([^.]+\.[^.]+)$/, '$1')
+  const domain = subdomain.replace(domainPattern, '$1')
   let expires = new Date()
   expires.setFullYear(expires.getFullYear() + 1)
   expires = expires.valueOf()
-  const issuer = hostname.replace(/.*?([^.]+\.[^.]+)$/, '$1') === 'oauth.do' ? 'oauth.do' : domain
+  const issuer = hostname.replace(domainPattern, '$1') === 'oauth.do' ? 'oauth.do' : domain
   const json = await env.JWT.fetch(new Request(
     new URL('/generate?' + qs.stringify({ issuer, expirationTTL: expires, secret: env.JWT_SECRET + issuer, profile }), 'https://' + domain)))
     .then(res => res.json())
