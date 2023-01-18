@@ -57,8 +57,7 @@ router.get('/login', loginRedirect)
 router.get('/login/callback', async (req, env) => {
   const url = new URL(req.url)
   let { location, token, sendCookie } = await env.REDIRECTS.get(url.searchParams.get('state') + '2').then(JSON.parse)
-  let jwt = await verify(hostname, token, env)
-
+  let jwt = await verify('oauth.do', token, env)
   let expires = new Date()
   expires.setFullYear(expires.getFullYear() + 1)
   expires = expires.valueOf()
