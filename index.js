@@ -61,7 +61,7 @@ router.get('/login/callback', async (req, env) => {
   let expires = new Date()
   expires.setFullYear(expires.getFullYear() + 1)
   expires = expires.valueOf()
-  const issuer = url.hostname.replace(/.*([^.]+\.[^.]+)$/, '$1')
+  const issuer = url.hostname.replace(/.*?([^.]+\.[^.]+)$/, '$1')
   const json = await env.JWT.fetch(new Request(
     new URL('/generate?' + qs.stringify({ issuer, expirationTTL: expires, secret: env.JWT_SECRET + issuer, profile: jwt.payload.profile }), 'https://' + issuer)))
     .then(res => res.json())
@@ -139,11 +139,11 @@ async function callback(req, env, context) {
   }
 
   const subdomain = location && new URL(location).hostname || hostname
-  const domain = subdomain.replace(/.*([^.]+\.[^.]+)$/, '$1')
+  const domain = subdomain.replace(/.*?([^.]+\.[^.]+)$/, '$1')
   let expires = new Date()
   expires.setFullYear(expires.getFullYear() + 1)
   expires = expires.valueOf()
-  const issuer = hostname.replace(/.*([^.]+\.[^.]+)$/, '$1') === 'oauth.do' ? 'oauth.do' : domain
+  const issuer = hostname.replace(/.*?([^.]+\.[^.]+)$/, '$1') === 'oauth.do' ? 'oauth.do' : domain
   const json = await env.JWT.fetch(new Request(
     new URL('/generate?' + qs.stringify({ issuer, expirationTTL: expires, secret: env.JWT_SECRET + issuer, profile }), 'https://' + domain)))
     .then(res => res.json())
