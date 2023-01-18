@@ -22,7 +22,7 @@ const enrichRequest = req => {
 
 async function verify(hostname, token, env) {
   if (!token) return token
-  const json = await env.JWT.fetch(new Request(new URL(`/verify?token=${token}`, 'https://' + hostname.replace(/.*\.([^.]+.[^.]+)$/, '$1')), {
+  const json = await env.JWT.fetch(new Request(new URL(`/verify?token=${token}`, 'https://' + hostname.replace(domainPattern, '$1')), {
     headers: { 'cookie': `${authCookie}=${token}` }
   })).then(res => res.json())
   return json.jwt
