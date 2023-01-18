@@ -55,8 +55,21 @@ router.get('/login', loginRedirect)
  * Bound service method to set the login cookie
  */
 router.get('/login/callback', async (req, env) => {
-  let { location, token, expires, sendCookie } = await env.REDIRECTS.get(new URL(req.url).searchParams.get('state') + '2').then(JSON.parse)
-  return cookieRedirect(location, token, expires, req, sendCookie)
+  const url = new URL(req.url)
+  let { location, token, sendCookie } = await env.REDIRECTS.get(url.searchParams.get('state') + '2').then(JSON.parse)
+  let jwt = await verify(hostname, token, env)
+
+  let expires = new Date()
+  expires.setFullYear(expires.getFullYear() + 1)
+  expires = expires.valueOf()
+  const issuer = url.hostname.replace(/.*\.([^.]+.[^.]+)$/, '$1')
+  const json = await env.JWT.fetch(new Request(
+    new URL('/generate?' + qs.stringify({ issuer, expirationTTL: expires, secret: env.JWT_SECRET + issuer, profile: jwt.payload.profile }), 'https://' + domain)))
+    .then(res => res.json())
+  if (json.error) throw json.error
+
+  return cookieRedirect(location, json.token, expires, req, sendCookie)
+
 })
 
 router.get('/login/:provider', loginRedirect)
@@ -133,14 +146,15 @@ async function callback(req, env, context) {
   let expires = new Date()
   expires.setFullYear(expires.getFullYear() + 1)
   expires = expires.valueOf()
+  const issuer = hostname.replace(/.*\.([^.]+.[^.]+)$/, '$1') === 'oauth.do' ? 'oauth.do' : domain
   const json = await env.JWT.fetch(new Request(
-    new URL('/generate?' + qs.stringify({ issuer: domain, expirationTTL: expires, secret: env.JWT_SECRET + domain, profile }), 'https://' + domain)))
+    new URL('/generate?' + qs.stringify({ issuer, expirationTTL: expires, secret: env.JWT_SECRET + issuer, profile }), 'https://' + domain)))
     .then(res => res.json())
   if (json.error) throw json.error
 
   await Promise.all([
     users && env.USERS.put(profile.id.toString(), JSON.stringify({ profile, user: users.user }, null, 2)),
-    env.REDIRECTS.put(query.state + '2', JSON.stringify({ location, token: json.token, expires, sendCookie }), { expirationTtl: 60 }),
+    env.REDIRECTS.put(query.state + '2', JSON.stringify({ location, token: json.token, sendCookie }), { expirationTtl: 60 }),
   ])
   return cookieRedirect(domain === 'oauth.do' ? location : `https://${subdomain}/login/callback?state=${query.state}`, json.token, expires, req, sendCookie)
 }
