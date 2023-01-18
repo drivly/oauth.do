@@ -133,9 +133,9 @@ async function callback(req, env, context) {
   let expires = new Date()
   expires.setFullYear(expires.getFullYear() + 1)
   expires = expires.valueOf()
-
+  const issuer = hostname.replace(/.*\.([^.]+.[^.]+)$/, '$1') === 'oauth.do' ? 'oauth.do' : domain
   const json = await env.JWT.fetch(new Request(
-    new URL('/generate?' + qs.stringify({ issuer: domain, expirationTTL: expires, secret: env.JWT_SECRET + domain, profile }), 'https://' + domain)))
+    new URL('/generate?' + qs.stringify({ issuer, expirationTTL: expires, secret: env.JWT_SECRET + issuer, profile }), 'https://' + domain)))
     .then(res => res.json())
   if (json.error) throw json.error
 
