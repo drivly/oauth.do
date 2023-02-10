@@ -99,9 +99,10 @@ router.get('/login/callback', async (req, env) => {
 })
 
 /**
- * Bound login service (also bound on oauth.do)
+ * Bound SISU services (also bound on oauth.do)
  */
 router.get('/login', loginRedirect)
+router.get('/signup', loginRedirect)
 router.get('/login/:provider', loginRedirect)
 
 async function loginRedirect(req, env) {
