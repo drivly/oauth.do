@@ -5,6 +5,8 @@ main = "index.js"
 compatibility_date = "2022-06-21"
 node_compat = true
 
+tail_consumers = [{service = "tail", environment = "production"}]
+
 services = [
   { binding = "CTX", service = "ctx-do", environment = "production" },
   { binding = "JWT", service = "jwt-do", environment = "production" }
