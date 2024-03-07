@@ -37,7 +37,7 @@
   "dependencies": {
     "itty-router": "^2.6.1",
     "itty-router-extras": "^0.4.2",
-    "jose": "^4.8.3",
+    "jose": "^4.15.5",
     "nanoid": "^4.0.0",
     "qs": "^6.11.0",
     "worker-auth-providers": "^0.0.10"
