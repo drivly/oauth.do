@@ -7,13 +7,15 @@ type User = {
   id: string;
   name?: string;
   email?: string;
-  image?: string;
+  image?: string | null;
 };
+
+type SocialProvider = "github" | "apple" | "discord" | "facebook" | "google" | "microsoft" | "spotify" | "twitch" | "twitter" | "dropbox" | "linkedin" | "gitlab" | "tiktok" | "reddit" | "roblox" | "vk" | "kick" | "zoom";
 
 type AuthContextType = {
   user: User | null;
   isLoading: boolean;
-  signIn: (provider: string) => Promise<void>;
+  signIn: (provider: SocialProvider) => Promise<void>;
   signOut: () => Promise<void>;
 };
 
@@ -36,7 +38,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     image: session.user.image,
   } : null;
 
-  const handleSignIn = async (provider: string) => {
+  const handleSignIn = async (provider: SocialProvider) => {
     try {
       await signIn.social({ provider });
     } catch (error) {
