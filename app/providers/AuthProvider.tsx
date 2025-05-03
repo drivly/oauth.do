@@ -27,7 +27,7 @@ const AuthContext = createContext<AuthContextType>({
 export const useAuth = () => useContext(AuthContext);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const { data: session, isLoading } = useSession();
+  const { data: session, isPending } = useSession();
   
   const user = session?.user ? {
     id: session.user.id,
@@ -55,7 +55,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   return (
     <AuthContext.Provider value={{ 
       user, 
-      isLoading, 
+      isLoading: isPending, 
       signIn: handleSignIn, 
       signOut: handleSignOut 
     }}>
