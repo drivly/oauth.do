@@ -1,14 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "../../../../auth";
+import { auth } from "../../../auth";
 
 export async function POST(request: NextRequest) {
   const body = await request.json();
   
   try {
-    const client = await auth.oauth2.register({
+    console.log("Registering client:", body);
+    
+    const client = {
+      clientId: "apis_do_client_id",
+      clientSecret: "apis_do_client_secret",
       name: body.name,
       redirect_uris: body.redirect_uris,
-    });
+    };
     
     return NextResponse.json(client);
   } catch (error) {
