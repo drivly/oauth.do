@@ -1,10 +1,14 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { Suspense, useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { authClient } from "../auth-client";
 
-export default function ConsentPage() {
+function ConsentLoading() {
+  return <div className="flex justify-center p-8">Loading consent page...</div>;
+}
+
+function ConsentContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [clientInfo, setClientInfo] = useState<any>(null);
@@ -100,5 +104,13 @@ export default function ConsentPage() {
         </button>
       </div>
     </div>
+  );
+}
+
+export default function ConsentPage() {
+  return (
+    <Suspense fallback={<ConsentLoading />}>
+      <ConsentContent />
+    </Suspense>
   );
 }
