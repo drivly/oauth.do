@@ -1,7 +1,7 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState } from "react";
-import { authClient } from "../auth-client";
+import React, { createContext, useContext } from "react";
+import { signIn, signOut, useSession } from "../auth-client";
 
 type User = {
   id: string;
@@ -27,49 +27,38 @@ const AuthContext = createContext<AuthContextType>({
 export const useAuth = () => useContext(AuthContext);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const { data: session, isLoading } = useSession();
+  
+  const user = session?.user ? {
+    id: session.user.id,
+    name: session.user.name,
+    email: session.user.email,
+    image: session.user.image,
+  } : null;
 
-  useEffect(() => {
-    const unsubscribe = authClient.session.subscribe((session: any) => {
-      if (session) {
-        setUser({
-          id: session.user.id,
-          name: session.user.name,
-          email: session.user.email,
-          image: session.user.image,
-        });
-      } else {
-        setUser(null);
-      }
-      setIsLoading(false);
-    });
-
-    authClient.session.init();
-
-    return () => {
-      unsubscribe();
-    };
-  }, []);
-
-  const signIn = async (provider: string) => {
+  const handleSignIn = async (provider: string) => {
     try {
-      await authClient.signIn.social({ provider });
+      await signIn.social({ provider });
     } catch (error) {
       console.error(`Failed to sign in with ${provider}:`, error);
     }
   };
 
-  const signOut = async () => {
+  const handleSignOut = async () => {
     try {
-      await authClient.signOut();
+      await signOut();
     } catch (error) {
       console.error("Failed to sign out:", error);
     }
   };
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, signIn, signOut }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      isLoading, 
+      signIn: handleSignIn, 
+      signOut: handleSignOut 
+    }}>
       {children}
     </AuthContext.Provider>
   );
